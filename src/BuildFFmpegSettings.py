@@ -16,7 +16,10 @@ class FFMpegSettings:
         self.interpolateTimes = interpolateTimes
         self.benchmark = False
         self.readingDone = False
+        self.writeOutPipe = False
 
+        if self.outputFile == "PIPE":
+            self.writeOutPipe = True
         
         
 
@@ -123,16 +126,30 @@ class FFMpegSettings:
         self.readQueue.put(None)
         
     def writeOutVideoFrames(self):
-        self.writeProcess = subprocess.Popen(
-            self.getFFmpegWriteCommand(),
-            stdin=subprocess.PIPE,
-            text=True,
-            universal_newlines=True,
-        )
+        """
+        Writes out frames either to ffmpeg or to pipe
+        This is determined by the --output command, which if the PIPE parameter is set, it outputs the chunk to pipe.
+        A command like this is required, 
+        ffmpeg -f rawvideo -pix_fmt rgb24 -s 1920x1080 -framerate 24 -i - -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy out.mp4 
+        """
 
-        for i in range(self.totalFrames * self.interpolateTimes):
-            frame = self.readQueue.get()
-            self.writeProcess.stdin.buffer.write(frame)
+        if self.writeOutPipe == False:
+            self.writeProcess = subprocess.Popen(
+                self.getFFmpegWriteCommand(),
+                stdin=subprocess.PIPE,
+                text=True,
+                universal_newlines=True,
+            )
 
-        self.writeProcess.stdin.close()
-        self.writeProcess.wait()
+            for i in range(self.totalFrames * self.interpolateTimes):
+                frame = self.readQueue.get()
+                self.writeProcess.stdin.buffer.write(frame)
+
+            self.writeProcess.stdin.close()
+            self.writeProcess.wait()
+
+        else:
+            process = subprocess.Popen(['cat'], stdin=subprocess.PIPE)
+            for i in range(self.totalFrames * self.interpolateTimes):
+                frame = self.readQueue.get()
+                process.stdin.write(frame)

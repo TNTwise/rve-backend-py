@@ -1,6 +1,8 @@
 import torch
 import argparse
 import os
+import subprocess
+
 
 from src.Util import is_image, warnAndLog
 from src.UpscaleTorch import UpscalePytorchImage
@@ -109,7 +111,7 @@ class HandleApplication:
             "-o",
             "--output",
             default=None,
-            help="output video path",
+            help="output video path or PIPE",
             type=str,
         )
         parser.add_argument(
