@@ -2,11 +2,11 @@ import torch
 import argparse
 import os
 import subprocess
-
+import numpy
 
 from src.Util import is_image, warnAndLog
 from src.UpscaleTorch import UpscalePytorchImage
-from src.UpscaleNCNN import UpscaleNCNNImage
+from src.UpscaleNCNN import UpscaleNCNN
 from src.ConvertModels import ConvertModels
 from src.BuildFFmpegSettings import FFMpegSettings
 from threading import Thread
@@ -28,6 +28,7 @@ class HandleApplication:
         ffmpegReadThread.start()
         ffmpegWriteThread.start()
         
+    
 
     def setDType(self):
         if self.args.half:
@@ -41,26 +42,9 @@ class HandleApplication:
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
 
-    def exportModelAsNCNN(self):
-        ConvertModels(
-            modelName=self.args.modelName,
-            pathToModel=self.fullModelPathandName(),
-            inputFormat="pytorch",
-            outputFormat="ncnn",
-            device="cpu",
-            dtype=self.dtype,
-        ).convertModel()
-
-    def exportModelAsONNX(self):
-        ConvertModels(
-            modelName=self.args.modelName,
-            pathToModel=self.fullModelPathandName(),
-            inputFormat="pytorch",
-            outputFormat="onnx",
-            device=self.returnDevice(),
-            dtype=self.dtype,
-            opset=17,
-        ).convertModel()
+    def getUpscaleMethod(self):
+        if self.args.backend == "ncnn":
+            self.upscaleMethod = UpscaleNCNN()
 
     def pytorchRenderSingleImage(self, imagePath: str):
         upscale = UpscalePytorchImage(
@@ -81,13 +65,7 @@ class HandleApplication:
         upscaledImage = upscale.tensorToNPArray(upscaledTensor)
         upscale.saveImage(upscaledImage, self.args.output)
 
-    def ncnnRenderSingleImage(self, imagePath: str):
-        upscale = UpscaleNCNNImage(
-            modelPath=self.args.modelPath,
-            modelName=self.args.modelName,
-        )
-        upscaledImage = upscale.renderImage(fullImagePath=imagePath)
-        upscale.saveImage(upscaledImage, self.args.output)
+    
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -136,19 +114,12 @@ class HandleApplication:
             type=str,
         )
         parser.add_argument(
-            "-m",
-            "--modelPath",
-            help="folder path to the pre-trained models. default=models",
-            default="models",
+            "-u",
+            "--upscale",
+            help="Direct path to upscaling model, will automatically upscale if model is valid.",
             type=str,
         )
-        parser.add_argument(
-            "-n",
-            "--modelName",
-            required=True,
-            help="model name (include extension)",
-            type=str,
-        )
+        
         parser.add_argument(
             "-c",
             "--cpu",

@@ -144,7 +144,7 @@ class FFMpegSettings:
             )
 
             for i in range(self.totalFrames * self.interpolateTimes):
-                frame = self.readQueue.get()
+                frame = self.writeQueue.get()
                 self.writeProcess.stdin.buffer.write(frame)
 
             self.writeProcess.stdin.close()
@@ -153,5 +153,7 @@ class FFMpegSettings:
         else:
             process = subprocess.Popen(['cat'], stdin=subprocess.PIPE)
             for i in range(self.totalFrames * self.interpolateTimes):
-                frame = self.readQueue.get()
+                frame = self.writeQueue.get()
                 process.stdin.write(frame)
+
+
