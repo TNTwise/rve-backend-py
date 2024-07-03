@@ -69,6 +69,8 @@ class FFMpegSettings:
                 f"{self.fps * self.interpolateTimes}",
                 "-i",
                 "-",
+                "-i",
+                f"{self.inputFile}",
                 "-c:v",
                 "libx264",
                 f"-crf",
