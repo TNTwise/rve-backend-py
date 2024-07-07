@@ -3,14 +3,15 @@ import os
 import subprocess
 import queue
 from .Util import currentDirectory
-from .UpscaleTorch import UpscalePytorchImage
+from .UpscaleTorch import UpscalePytorchImage, loadTorchModel
 from threading import Thread
 
 class FFMpegRender:
     def __init__(self,
                  inputFile: str,
                  outputFile: str,
-                 interpolateTimes: int =1,
+                 interpolateTimes: int = 1,
+                 upscaleTimes: int = 1,
                  encoder: str = "libx264",
                  pixelFormat: str = "yuv420p",
                  benchmark: bool = False
@@ -21,6 +22,7 @@ class FFMpegRender:
         inputFile: str, The path to the input file.
         outputFile: str, The path to the output file.
         interpolateTimes: int, this sets the multiplier for the framerate when interpolating, when only upscaling this will be set to 1.
+        upscaleTimes: int,
         encoder: str, The exact name of the encoder ffmpeg will use (default=libx264)
         pixelFormat: str, The pixel format ffmpeg will use, (default=yuv420p)
         """
@@ -28,7 +30,7 @@ class FFMpegRender:
         self.outputFile = outputFile
         
         # upsacletimes will be set to the scale of the loaded model with spandrel
-        self.upscaleTimes = 1
+        self.upscaleTimes = upscaleTimes
         self.interpolateTimes = interpolateTimes
         self.encoder = encoder
         self.pixelFormat = pixelFormat
@@ -77,59 +79,83 @@ class FFMpegRender:
         return command
     
     def getFFmpegWriteCommand(self):
-        if not self.benchmark:
+        if not self.outputFile == 'PIPE':
+            if not self.benchmark:
+                #maybe i can split this so i can just use ffmpeg normally like with vspipe
+                command = [
+                    f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgb24",
+                    "-vcodec",
+                    "rawvideo",
+                    "-s",
+                    f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
+                    "-r",
+                    f"{self.fps * self.interpolateTimes}",
+                    "-i",
+                    "-",
+                    "-i",
+                    f"{self.inputFile}",
+                    "-c:v",
+                    self.encoder,
+                    f"-crf",
+                    f'18',
+                    "-pix_fmt",
+                    self.pixelFormat,
+                    "-c:a",
+                    "copy",
+                    f"{self.outputFile}",
+                ]
+            else:
+                command = [
+                    f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
+                    "-y",
+                    "-v",
+                    "warning",
+                    "-stats",
+                    "-f",
+                    "rawvideo",
+                    "-vcodec",
+                    "rawvideo",
+                    "-s",
+                    f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
+                    "-pix_fmt",
+                    f"yuv420p",
+                    "-r",
+                    f"{self.fps * self.interpolateTimes}",
+                    "-i",
+                    "-",
+                    "-benchmark",
+                    "-f",
+                    "null",
+                    "-",
+                ]
+            return command                 
+        '''else:
+            
             command = [
-                f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "rgb24",
-                "-vcodec",
-                "rawvideo",
-                "-s",
-                f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
-                "-r",
-                f"{self.fps * self.interpolateTimes}",
-                "-i",
-                "-",
-                "-i",
-                f"{self.inputFile}",
-                "-c:v",
-                self.encoder,
-                f"-crf",
-                f'18',
-                "-pix_fmt",
-                self.pixelFormat,
-                "-c:a",
-                "copy",
-                f"{self.outputFile}",
-            ]
-        else:
-            command = [
-                f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
-                "-y",
-                "-v",
-                "warning",
-                "-stats",
-                "-f",
-                "rawvideo",
-                "-vcodec",
-                "rawvideo",
-                "-s",
-                f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
-                "-pix_fmt",
-                f"yuv420p",
-                "-r",
-                f"{self.fps * self.interpolateTimes}",
-                "-i",
-                "-",
-                "-benchmark",
-                "-f",
-                "null",
-                "-",
-            ]
-        return command        
-        
+            f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-vcodec",
+            "rawvideo",
+            "-s",
+            f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
+            "-r",
+            f"{self.fps * self.interpolateTimes}",
+            "-i",
+            f"-",
+            "-pix_fmt",
+            "rgb24", 
+            '-f', 
+            'rawvideo',
+            "-",
+        ]'''
+           
     def readinVideoFrames(self):
         self.readProcess = subprocess.Popen(
             self.getFFmpegReadCommand(),
@@ -140,6 +166,7 @@ class FFMpegRender:
         for i in range(self.totalFrames):
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
             self.readQueue.put(chunk)
+            
         
         self.readProcess.stdout.close()
         self.readProcess.terminate()
@@ -162,8 +189,10 @@ class FFMpegRender:
                 universal_newlines=True,
             )
 
-            for i in range(self.totalFrames * self.interpolateTimes):
-                frame = self.writeQueue.get()
+            while True:
+                frame = self.readQueue.get()
+                if frame == None:
+                    break
                 self.writeProcess.stdin.buffer.write(frame)
 
             self.writeProcess.stdin.close()
@@ -171,8 +200,11 @@ class FFMpegRender:
 
         else:
             process = subprocess.Popen(['cat'], stdin=subprocess.PIPE)
-            for i in range(self.totalFrames * self.interpolateTimes):
+            while True:
+                
                 frame = self.writeQueue.get()
+                if frame == None:
+                    break
                 process.stdin.write(frame)
 
 class Render(FFMpegRender):
@@ -188,6 +220,9 @@ class Render(FFMpegRender):
         RenderOptions:
         interpolationMethod
         upscaleModel
+        backend
+        device
+        precision
 
     """
     def __init__(self,
@@ -197,22 +232,50 @@ class Render(FFMpegRender):
                  encoder: str = "libx264",
                  pixelFormat: str = "yuv420p",
                  benchmark: bool = False,
+                 backend = "pytorch",
                  interpolationMethod = None,
-                 upscaleModel = None
+                 upscaleModel = None,
+                 device = "cuda",
+                 precision = "float16"
                  ):
+        self.backend = backend
+        self.upscaleModel = upscaleModel
+        self.device = device
+        self.precision = precision
+        self.setupUpscale()
         super().__init__(
             inputFile=inputFile, 
             outputFile=outputFile,
             interpolateTimes=interpolateTimes,
+            upscaleTimes=self.upscaleTimes,
             encoder=encoder,
             pixelFormat=pixelFormat,
             benchmark=benchmark,
             )
         self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
         self.ffmpegWriteThread = Thread(target=self.writeOutVideoFrames)
-        '''ffmpegReadThread.start()
-        ffmpegWriteThread.start()'''
-    def upscale(self):
+        self.ffmpegReadThread.start()
+        self.ffmpegWriteThread.start()
+    def render(self):
+        """
+        self.bytesToFrame, method that is mapped to the bytesToFrame in each respective backend
+        self.upscale, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
+        """
+        
         pass
+    def setupUpscale(self):
+        if self.backend == "pytorch":
+            model = loadTorchModel(
+                                   self.upscaleModel,
+                                   self.precision,
+                                   self.device
+                                   )
+            upscalePytorch = UpscalePytorchImage(
+                model,
+                device=self.device,
+                precision=self.precision
+                )
+            self.bytesToFrame = upscalePytorch.bytesToFrame
+            self.upscale = upscalePytorch.renderImage
     def interpolate(self):
         pass

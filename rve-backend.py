@@ -8,17 +8,17 @@ from src.Util import is_image, warnAndLog
 from src.UpscaleTorch import UpscalePytorchImage
 from src.UpscaleNCNN import UpscaleNCNN
 from src.ConvertModels import ConvertModels
-from RenderVideo import FFMpegRender
+from src.RenderVideo import Render
 class HandleApplication:
     def __init__(self):
         self.args = self.handleArguments()
         self.checkArguments()
         self.setDType()
-    
-        
-        
-    
-
+        ffmpegSettings = Render(
+            inputFile=self.args.input, 
+            outputFile=self.args.output,
+            interpolateTimes=1
+            )
     def setDType(self):
         if self.args.half:
             self.dtype = torch.half
@@ -72,6 +72,7 @@ class HandleApplication:
             "--input",
             default=None,
             help="input video path",
+            required=True,
             type=str,
         )
         parser.add_argument(
@@ -79,6 +80,7 @@ class HandleApplication:
             "--output",
             default=None,
             help="output video path or PIPE",
+            required=True,
             type=str,
         )
         parser.add_argument(

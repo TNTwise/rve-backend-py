@@ -1,8 +1,6 @@
 from PIL import Image
-from spandrel import ImageModelDescriptor, ModelLoader
 import os
 import warnings
-import torch
 
 cwd = os.getcwd()
 
@@ -15,26 +13,6 @@ def is_image(file_path):
     except (IOError, SyntaxError):
         return False
 
-
-def loadModelWithScale(
-    modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
-):
-    model = ModelLoader().load_from_file(modelPath)
-    assert isinstance(model, ImageModelDescriptor)
-    # get model attributes
-    scale = model.scale
-
-    model.to(device=device, dtype=dtype)
-    return model, scale
-
-
-def loadModel(modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"):
-    model = ModelLoader().load_from_file(modelPath)
-    assert isinstance(model, ImageModelDescriptor)
-    # get model attributes
-
-    model.to(device=device, dtype=dtype)
-    return model
 
 
 def warnAndLog(message: str):

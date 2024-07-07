@@ -1,29 +1,68 @@
 import os
 import torch
+from spandrel import ModelLoader,ImageModelDescriptor
 import math
 import numpy as np
 import cv2
 
-from .Util import loadModelWithScale
 
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
+def handlePrecision(precision):
+    if precision == "float32":
+        return torch.float32
+    if precision == "float16":
+        return torch.float16
+    
+def loadTorchModel(modelPath: str, precision:str= "float32", device: str = "cuda"):
+        dtype = handlePrecision(precision)
+        model = ModelLoader().load_from_file(modelPath)
+        assert isinstance(model, ImageModelDescriptor)
+        # get model attributes
 
-
+        model.to(device=device, dtype=dtype)
+        return model
 class UpscalePytorchImage:
     def __init__(
         self,
-        modelPath: str = "models",
-        modelName: str = "",
+        model: ImageModelDescriptor,
         device="cuda",
         tile_pad: int = 10,
-        dtype: torch.dtype = torch.float32,
+        precision: str = "float16"
     ):
         self.tile_pad = tile_pad
-        self.dtype = dtype
+        self.dtype = handlePrecision(precision)
         self.device = device
-        path = os.path.join(modelPath, modelName)
-        self.model, self.scale = loadModelWithScale(path, dtype, device)
+        self.model = model
 
+    def loadModelWithScale(
+        modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
+    ):
+        model = ModelLoader().load_from_file(modelPath)
+        assert isinstance(model, ImageModelDescriptor)
+        # get model attributes
+        scale = model.scale
+
+        model.to(device=device, dtype=dtype)
+        return model, scale
+
+
+    def loadModel(modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"):
+        model = ModelLoader().load_from_file(modelPath)
+        assert isinstance(model, ImageModelDescriptor)
+        # get model attributes
+
+        model.to(device=device, dtype=dtype)
+        return model
+    def bytesToFrame(self, frame):
+        return (
+            torch.frombuffer(frame, dtype=torch.uint8)
+            .reshape(self.height, self.width, 3)
+            .to(self.device, non_blocking=True)
+            .permute(2, 0, 1)
+            .unsqueeze(0)
+            .float()
+            .mul_(1 / 255)
+        )
     def loadImage(self, imagePath: str) -> torch.Tensor:
         image = cv2.imread(imagePath)
         imageTensor = (
@@ -43,6 +82,9 @@ class UpscalePytorchImage:
     def renderImage(self, image: torch.Tensor) -> torch.Tensor:
         upscaledImage = self.model(image)
         return upscaledImage
+
+    def renderToNPArray(self, image: torch.Tensor) -> torch.Tensor:
+        return self.model(image).squeeze(0).permute(1, 2, 0).float().mul(255).cpu().numpy()
 
     @torch.inference_mode()
     def renderImagesInDirectory(self, dir):
