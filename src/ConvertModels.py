@@ -2,8 +2,9 @@ import os
 import torch
 import pnnx
 
-from .Util import  log, warnAndLog
+from .Util import log, warnAndLog
 from .UpscaleTorch import loadTorchModel
+
 cwd = os.getcwd()
 
 
@@ -37,7 +38,7 @@ class ConvertModels:
             self.convertPyTorchToONNX()
         if self.outputFormat == "ncnn":
             self.convertPytorchToNCNN()
-   
+
     @torch.inference_mode
     def convertPyTorchToONNX(self):
         # load model

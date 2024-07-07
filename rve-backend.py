@@ -9,19 +9,22 @@ from src.UpscaleTorch import UpscalePytorchImage
 from src.UpscaleNCNN import UpscaleNCNN
 from src.ConvertModels import ConvertModels
 from src.RenderVideo import Render
+
+
 class HandleApplication:
     def __init__(self):
         self.args = self.handleArguments()
         self.checkArguments()
         self.setDType()
         ffmpegSettings = Render(
-            inputFile=self.args.input, 
+            inputFile=self.args.input,
             outputFile=self.args.output,
             interpolateTimes=1,
             upscaleModel=self.args.upscaleModel,
             device="cpu",
-            precision="float32"
-            )
+            precision="float32",
+        )
+
     def setDType(self):
         if self.args.half:
             self.dtype = torch.half
@@ -56,8 +59,6 @@ class HandleApplication:
         )
         upscaledImage = upscale.tensorToNPArray(upscaledTensor)
         upscale.saveImage(upscaledImage, self.args.output)
-
-    
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -113,7 +114,7 @@ class HandleApplication:
             help="Direct path to upscaling model, will automatically upscale if model is valid.",
             type=str,
         )
-        
+
         parser.add_argument(
             "-c",
             "--cpu",
