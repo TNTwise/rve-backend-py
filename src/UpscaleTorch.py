@@ -33,6 +33,7 @@ class UpscalePytorchImage:
         self.dtype = handlePrecision(precision)
         self.device = device
         self.model = model
+        self.scale = model.scale
 
     def loadModelWithScale(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
@@ -53,14 +54,13 @@ class UpscalePytorchImage:
 
         model.to(device=device, dtype=dtype)
         return model
-    def bytesToFrame(self, frame):
+    def bytesToFrame(self, frame, height, width):
         return (
             torch.frombuffer(frame, dtype=torch.uint8)
-            .reshape(self.height, self.width, 3)
-            .to(self.device, non_blocking=True)
+            .reshape(height, width, 3)
+            .to(self.device, non_blocking=True,dtype=self.dtype)
             .permute(2, 0, 1)
             .unsqueeze(0)
-            .float()
             .mul_(1 / 255)
         )
     def loadImage(self, imagePath: str) -> torch.Tensor:
@@ -84,7 +84,7 @@ class UpscalePytorchImage:
         return upscaledImage
 
     def renderToNPArray(self, image: torch.Tensor) -> torch.Tensor:
-        return self.model(image).squeeze(0).permute(1, 2, 0).float().mul(255).cpu().numpy()
+        return self.model(image).squeeze(0).permute(1, 2, 0).float().mul(255).byte().contiguous().cpu().numpy()
 
     @torch.inference_mode()
     def renderImagesInDirectory(self, dir):

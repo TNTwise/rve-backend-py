@@ -190,8 +190,8 @@ class FFMpegRender:
             )
 
             while True:
-                frame = self.readQueue.get()
-                if frame == None:
+                frame = self.writeQueue.get()
+                if frame is None:
                     break
                 self.writeProcess.stdin.buffer.write(frame)
 
@@ -203,7 +203,7 @@ class FFMpegRender:
             while True:
                 
                 frame = self.writeQueue.get()
-                if frame == None:
+                if frame is None:
                     break
                 process.stdin.write(frame)
 
@@ -254,15 +254,22 @@ class Render(FFMpegRender):
             )
         self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
         self.ffmpegWriteThread = Thread(target=self.writeOutVideoFrames)
+        self.renderThread = Thread(target=self.render)
         self.ffmpegReadThread.start()
         self.ffmpegWriteThread.start()
+        self.renderThread.start()
     def render(self):
         """
         self.bytesToFrame, method that is mapped to the bytesToFrame in each respective backend
         self.upscale, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
         """
-        
-        pass
+        for i in range(self.totalFrames):
+            frame = self.readQueue.get()
+            frame = self.bytesToFrame(frame, height=self.height, width=self.width)
+            if self.upscaleModel:
+                frame = self.upscale(frame)
+                print("Rendered Frame")
+            self.writeQueue.put(frame)
     def setupUpscale(self):
         if self.backend == "pytorch":
             model = loadTorchModel(
@@ -275,7 +282,8 @@ class Render(FFMpegRender):
                 device=self.device,
                 precision=self.precision
                 )
+            self.upscaleTimes = upscalePytorch.getScale()
             self.bytesToFrame = upscalePytorch.bytesToFrame
-            self.upscale = upscalePytorch.renderImage
+            self.upscale = upscalePytorch.renderToNPArray
     def interpolate(self):
         pass

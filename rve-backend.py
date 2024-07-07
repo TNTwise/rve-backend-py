@@ -17,7 +17,10 @@ class HandleApplication:
         ffmpegSettings = Render(
             inputFile=self.args.input, 
             outputFile=self.args.output,
-            interpolateTimes=1
+            interpolateTimes=1,
+            upscaleModel=self.args.upscaleModel,
+            device="cpu",
+            precision="float32"
             )
     def setDType(self):
         if self.args.half:
@@ -106,7 +109,7 @@ class HandleApplication:
         )
         parser.add_argument(
             "-u",
-            "--upscale",
+            "--upscaleModel",
             help="Direct path to upscaling model, will automatically upscale if model is valid.",
             type=str,
         )

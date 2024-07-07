@@ -2,8 +2,8 @@ import os
 import torch
 import pnnx
 
-from .Util import loadModel, log, warnAndLog
-
+from .Util import  log, warnAndLog
+from .UpscaleTorch import loadTorchModel
 cwd = os.getcwd()
 
 
@@ -75,7 +75,7 @@ class ConvertModels:
         Takes in a pytorch model, and uses JIT tracing with PNNX to convert it to ncnn.
         This method removed unnecessary files, and fixes the param file to be compadible with most NCNN appliacitons.
         """
-        model = loadModel(self.pathToModel, torch.float32, self.device).model
+        model = loadTorchModel(self.pathToModel, torch.float32, self.device).model
         model.eval()
         input = torch.rand(1, 3, 256, 256)
         jitTracedModelLocation = self.pathToModel + ".pt"
