@@ -21,9 +21,7 @@ class UpscalePytorchImage:
         self.tile_pad = tile_pad
         self.dtype = dtype
         self.device = device
-
         path = os.path.join(modelPath, modelName)
-
         self.model, self.scale = loadModelWithScale(path, dtype, device)
 
     def loadImage(self, imagePath: str) -> torch.Tensor:

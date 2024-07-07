@@ -3,23 +3,46 @@ import os
 import subprocess
 import queue
 from .Util import currentDirectory
-class FFMpegSettings:
+from .UpscaleTorch import UpscalePytorchImage
+from threading import Thread
+
+class FFMpegRender:
     def __init__(self,
                  inputFile: str,
                  outputFile: str,
-                 upscaleTimes: int = 1,
                  interpolateTimes: int =1,
+                 encoder: str = "libx264",
+                 pixelFormat: str = "yuv420p",
+                 benchmark: bool = False
                  ):
+        """
+        Generates FFmpeg I/O commands to be used with VideoIO
+        Options:
+        inputFile: str, The path to the input file.
+        outputFile: str, The path to the output file.
+        interpolateTimes: int, this sets the multiplier for the framerate when interpolating, when only upscaling this will be set to 1.
+        encoder: str, The exact name of the encoder ffmpeg will use (default=libx264)
+        pixelFormat: str, The pixel format ffmpeg will use, (default=yuv420p)
+        """
         self.inputFile = inputFile
         self.outputFile = outputFile
-        self.upscaleTimes = upscaleTimes
+        
+        # upsacletimes will be set to the scale of the loaded model with spandrel
+        self.upscaleTimes = 1
         self.interpolateTimes = interpolateTimes
+        self.encoder = encoder
+        self.pixelFormat = pixelFormat
+        self.benchmark = benchmark
         self.benchmark = False
         self.readingDone = False
         self.writeOutPipe = False
 
         if self.outputFile == "PIPE":
             self.writeOutPipe = True
+        
+        self.readQueue = queue.Queue(maxsize=50)
+        self.writeQueue = queue.Queue(maxsize=50)
+        self.getVideoProperties()
         
         
 
@@ -72,11 +95,11 @@ class FFMpegSettings:
                 "-i",
                 f"{self.inputFile}",
                 "-c:v",
-                "libx264",
+                self.encoder,
                 f"-crf",
                 f'18',
                 "-pix_fmt",
-                "yuv420p",
+                self.pixelFormat,
                 "-c:a",
                 "copy",
                 f"{self.outputFile}",
@@ -105,11 +128,7 @@ class FFMpegSettings:
                 "null",
                 "-",
             ]
-        return command
-    
-    def buildIOQueues(self):
-        self.readQueue = queue.Queue(maxsize=50)
-        self.writeQueue = queue.Queue(maxsize=50)
+        return command        
         
     def readinVideoFrames(self):
         self.readProcess = subprocess.Popen(
@@ -156,4 +175,44 @@ class FFMpegSettings:
                 frame = self.writeQueue.get()
                 process.stdin.write(frame)
 
+class Render(FFMpegRender):
+    """
+        Subclass of FFmpegRender
+        FFMpegRender options:
+        inputFile: str, The path to the input file.
+        outputFile: str, The path to the output file.
+        interpolateTimes: int, this sets the multiplier for the framerate when interpolating, when only upscaling this will be set to 1.
+        encoder: str, The exact name of the encoder ffmpeg will use (default=libx264)
+        pixelFormat: str, The pixel format ffmpeg will use, (default=yuv420p)
 
+        RenderOptions:
+        interpolationMethod
+        upscaleModel
+
+    """
+    def __init__(self,
+                 inputFile: str,
+                 outputFile: str,
+                 interpolateTimes: int = 1,
+                 encoder: str = "libx264",
+                 pixelFormat: str = "yuv420p",
+                 benchmark: bool = False,
+                 interpolationMethod = None,
+                 upscaleModel = None
+                 ):
+        super().__init__(
+            inputFile=inputFile, 
+            outputFile=outputFile,
+            interpolateTimes=interpolateTimes,
+            encoder=encoder,
+            pixelFormat=pixelFormat,
+            benchmark=benchmark,
+            )
+        self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
+        self.ffmpegWriteThread = Thread(target=self.writeOutVideoFrames)
+        '''ffmpegReadThread.start()
+        ffmpegWriteThread.start()'''
+    def upscale(self):
+        pass
+    def interpolate(self):
+        pass

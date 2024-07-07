@@ -8,25 +8,14 @@ from src.Util import is_image, warnAndLog
 from src.UpscaleTorch import UpscalePytorchImage
 from src.UpscaleNCNN import UpscaleNCNN
 from src.ConvertModels import ConvertModels
-from src.BuildFFmpegSettings import FFMpegSettings
-from threading import Thread
+from RenderVideo import FFMpegRender
 class HandleApplication:
     def __init__(self):
         self.args = self.handleArguments()
         self.checkArguments()
         self.setDType()
-        ffmpegSettings = FFMpegSettings(
-            inputFile=self.args.input, 
-            outputFile=self.args.output,
-            upscaleTimes=1, 
-            interpolateTimes=1
-            )
-        ffmpegSettings.buildIOQueues()
-        ffmpegSettings.getVideoProperties()
-        ffmpegReadThread = Thread(target=ffmpegSettings.readinVideoFrames)
-        ffmpegWriteThread = Thread(target=ffmpegSettings.writeOutVideoFrames)
-        ffmpegReadThread.start()
-        ffmpegWriteThread.start()
+    
+        
         
     
 
