@@ -295,9 +295,8 @@ class Render(FFMpegRender):
         Maps the self.upscale the upscale function in the respective backend.
         """
         if self.backend == "pytorch":
-            model = loadTorchModel(self.upscaleModel, self.precision, self.device)
             upscalePytorch = UpscalePytorch(
-                model,
+                self.upscaleModel,
                 device=self.device,
                 precision=self.precision,
                 width=self.width,

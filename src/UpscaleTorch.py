@@ -1,50 +1,43 @@
 import os
-import torch
-from spandrel import ModelLoader, ImageModelDescriptor
 import math
 import numpy as np
 import cv2
 
 
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
-def handlePrecision(precision):
-    if precision == "float32":
-        return torch.float32
-    if precision == "float16":
-        return torch.float16
-
-
-def loadTorchModel(modelPath: str, precision: str = "float32", device: str = "cuda"):
-    dtype = handlePrecision(precision)
-    model = ModelLoader().load_from_file(modelPath)
-    assert isinstance(model, ImageModelDescriptor)
-    # get model attributes
-
-    model.to(device=device, dtype=dtype)
-    return model
-
 
 class UpscalePytorch:
     def __init__(
         self,
-        model: ImageModelDescriptor,
+        modelPath: str,
         device="cuda",
         tile_pad: int = 10,
         precision: str = "float16",
         width: int = 1920,
         height: int = 1080,
     ):
+        # Only importing if necessary
+        import torch
+        from spandrel import ModelLoader, ImageModelDescriptor  
+
         self.tile_pad = tile_pad
-        self.dtype = handlePrecision(precision)
+        self.dtype = self.handlePrecision(precision)
         self.device = device
-        self.model = model
-        self.scale = model.scale
+        self.model = self.loadModel(modelPath=modelPath,
+                                    device=device,
+                                    dtype=self.handlePrecision(precision)
+                                    )
+        self.scale = self.model.scale
         self.width = width
         self.height = height
-
+    def handlePrecision(precision):
+        if precision == "float32":
+            return torch.float32
+        if precision == "float16":
+            return torch.float16
     def loadModelWithScale(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
-    ):
+    ) -> list[ImageModelDescriptor, int]:
         model = ModelLoader().load_from_file(modelPath)
         assert isinstance(model, ImageModelDescriptor)
         # get model attributes
@@ -55,7 +48,7 @@ class UpscalePytorch:
 
     def loadModel(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
-    ):
+    ) -> ImageModelDescriptor: 
         model = ModelLoader().load_from_file(modelPath)
         assert isinstance(model, ImageModelDescriptor)
         # get model attributes
