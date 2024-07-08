@@ -6,6 +6,7 @@ import cv2
 
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
+
 class UpscalePytorch:
     def __init__(
         self,
@@ -18,23 +19,24 @@ class UpscalePytorch:
     ):
         # Only importing if necessary
         import torch
-        from spandrel import ModelLoader, ImageModelDescriptor  
+        from spandrel import ModelLoader, ImageModelDescriptor
 
         self.tile_pad = tile_pad
         self.dtype = self.handlePrecision(precision)
         self.device = device
-        self.model = self.loadModel(modelPath=modelPath,
-                                    device=device,
-                                    dtype=self.handlePrecision(precision)
-                                    )
+        self.model = self.loadModel(
+            modelPath=modelPath, device=device, dtype=self.handlePrecision(precision)
+        )
         self.scale = self.model.scale
         self.width = width
         self.height = height
+
     def handlePrecision(precision):
         if precision == "float32":
             return torch.float32
         if precision == "float16":
             return torch.float16
+
     def loadModelWithScale(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
     ) -> list[ImageModelDescriptor, int]:
@@ -48,7 +50,7 @@ class UpscalePytorch:
 
     def loadModel(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
-    ) -> ImageModelDescriptor: 
+    ) -> ImageModelDescriptor:
         model = ModelLoader().load_from_file(modelPath)
         assert isinstance(model, ImageModelDescriptor)
         # get model attributes
