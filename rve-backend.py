@@ -32,8 +32,6 @@ class HandleApplication:
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
 
-   
-
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
 
@@ -129,5 +127,4 @@ class HandleApplication:
 
 
 if __name__ == "__main__":
-    
     HandleApplication()

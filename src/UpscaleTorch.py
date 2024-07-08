@@ -31,12 +31,16 @@ class UpscalePytorch:
         device="cuda",
         tile_pad: int = 10,
         precision: str = "float16",
+        width: int = 1920,
+        height: int = 1080,
     ):
         self.tile_pad = tile_pad
         self.dtype = handlePrecision(precision)
         self.device = device
         self.model = model
         self.scale = model.scale
+        self.width = width
+        self.height = height
 
     def loadModelWithScale(
         modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
@@ -59,10 +63,10 @@ class UpscalePytorch:
         model.to(device=device, dtype=dtype)
         return model
 
-    def bytesToFrame(self, frame, height, width):
+    def bytesToFrame(self, frame):
         return (
             torch.frombuffer(frame, dtype=torch.uint8)
-            .reshape(height, width, 3)
+            .reshape(self.height, self.width, 3)
             .to(self.device, non_blocking=True, dtype=self.dtype)
             .permute(2, 0, 1)
             .unsqueeze(0)

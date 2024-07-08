@@ -1,5 +1,3 @@
-
-
 # https://github.com/chaiNNer-org/chaiNNer/blob/2aa0b46233ba8cd90d4bb405e2bc6e16a3430546/backend/src/nodes/impl/ncnn/model.py
 
 
@@ -18,6 +16,7 @@ from upscale_ncnn_py import UPSCALE
 
 # import ncnn
 import cv2
+
 T = TypeVar("T")
 
 
@@ -3790,14 +3789,22 @@ def getNCNNScale(modelPath: str = "") -> int:
     scale = get_broadcast_data(model)[0]
     return scale
 
+
 class UpscaleNCNN:
     def __init__(
-        self, modelPath: str, num_threads: int, scale: int, gpuid:int=0
+        self,
+        modelPath: str,
+        num_threads: int,
+        scale: int,
+        gpuid: int = 0,
+        width: int = 1920,
+        height: int = 1080,
     ):
         self.model = UPSCALE(
             gpuid=gpuid, model_str=modelPath, num_threads=num_threads, scale=scale
         )
-        
+        self.width = width
+        self.height = height
         self.scale = scale
         """model = model + '.param'
         self.net = ncnn.Net()
@@ -3841,10 +3848,10 @@ class UpscaleNCNN:
         frame = self.ClampNPArray(frame)
         frame = frame.transpose(1, 2, 0)
         return np.ascontiguousarray(frame, dtype=np.uint8)"""
-    def setWidthAndHeight(self,frame, width,height):
-        self.width = width
-        self.height = height
+
+    def setWidthAndHeight(self, frame):
         return frame
+
     def Upscale(self, imageChunk):
         output = self.model.process_bytes(imageChunk, self.width, self.height, 3)
         return np.ascontiguousarray(
