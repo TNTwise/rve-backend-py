@@ -86,7 +86,12 @@ class HandleApplication:
             help="Direct path to upscaling model, will automatically upscale if model is valid.",
             type=str,
         )
-
+        parser.add_argument(
+            "-i",
+            "--interpolateModel",
+            help="",
+            type=str,
+        )
         parser.add_argument(
             "-c",
             "--cpu",

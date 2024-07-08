@@ -240,11 +240,13 @@ class Render(FFMpegRender):
         backend="pytorch",
         interpolationMethod=None,
         upscaleModel=None,
+        interpolateModel=None,
         device="cuda",
         precision="float16",
     ):
         self.backend = backend
         self.upscaleModel = upscaleModel
+        self.interpolateModel = interpolateModel
         self.device = device
         self.precision = precision
         self.upscaleTimes = 1  # if no upscaling, it will default to 1
@@ -286,6 +288,12 @@ class Render(FFMpegRender):
             self.writeQueue.put(frame)
 
     def setupUpscale(self):
+        """
+        This is called to setup an upscaling model if it exists.
+        Maps the self.upscaleTimes to the actual scale of the model
+        Maps the self.setupRender function that can setup frames to be rendered
+        Maps the self.upscale the upscale function in the respective backend.
+        """
         if self.backend == "pytorch":
             model = loadTorchModel(self.upscaleModel, self.precision, self.device)
             upscalePytorch = UpscalePytorch(
