@@ -2,11 +2,11 @@ import cv2
 import os
 import subprocess
 import queue
-from .Util import currentDirectory
-from .UpscaleTorch import UpscalePytorchImage, loadTorchModel
 from threading import Thread
 
-
+from .UpscaleTorch import UpscalePytorch, loadTorchModel
+from .Util import currentDirectory
+from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
 class FFMpegRender:
     def __init__(
         self,
@@ -218,10 +218,10 @@ class Render(FFMpegRender):
 
     RenderOptions:
     interpolationMethod
-    upscaleModel
-    backend
-    device
-    precision
+    upscaleModel 
+    backend (pytorch,ncnn)
+    device (cpu,cuda)
+    precision (float16,float32)
 
     """
 
@@ -244,7 +244,7 @@ class Render(FFMpegRender):
         self.device = device
         self.precision = precision
         self.upscaleTimes = 1  # if no upscaling, it will default to 1
-        self.bytesToFrame = self.returnFrame  # set it to not convert the bytes to array by default, and just pass chunk through
+        self.setupRender = self.returnFrame  # set it to not convert the bytes to array by default, and just pass chunk through
         if upscaleModel:
             self.setupUpscale()
         super().__init__(
@@ -268,12 +268,12 @@ class Render(FFMpegRender):
 
     def render(self):
         """
-        self.bytesToFrame, method that is mapped to the bytesToFrame in each respective backend
+        self.setupRender, method that is mapped to the bytesToFrame in each respective backend
         self.upscale, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
         """
         for i in range(self.totalFrames):
             frame = self.readQueue.get()
-            frame = self.bytesToFrame(frame, height=self.height, width=self.width)
+            frame = self.setupRender(frame, height=self.height, width=self.width)
             if self.upscaleModel:
                 frame = self.upscale(frame)
                 print("Rendered Frame")
@@ -282,12 +282,24 @@ class Render(FFMpegRender):
     def setupUpscale(self):
         if self.backend == "pytorch":
             model = loadTorchModel(self.upscaleModel, self.precision, self.device)
-            upscalePytorch = UpscalePytorchImage(
+            upscalePytorch = UpscalePytorch(
                 model, device=self.device, precision=self.precision
             )
             self.upscaleTimes = upscalePytorch.getScale()
-            self.bytesToFrame = upscalePytorch.bytesToFrame
+            self.setupRender = upscalePytorch.bytesToFrame
             self.upscale = upscalePytorch.renderToNPArray
-
+            
+        if self.backend == "ncnn":
+            self.upscaleTimes = getNCNNScale(modelPath=self.upscaleModel)
+            upscaleNCNN = UpscaleNCNN(
+                modelPath=self.upscaleModel,
+                num_threads=1,
+                scale=self.upscaleTimes,
+                gpuid=0 #might have this be a setting
+            )
+            self.setupRender = upscaleNCNN.setWidthAndHeight
+            self.upscale = upscaleNCNN.Upscale
+            
+        
     def interpolate(self):
         pass

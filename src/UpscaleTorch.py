@@ -24,7 +24,7 @@ def loadTorchModel(modelPath: str, precision: str = "float32", device: str = "cu
     return model
 
 
-class UpscalePytorchImage:
+class UpscalePytorch:
     def __init__(
         self,
         model: ImageModelDescriptor,

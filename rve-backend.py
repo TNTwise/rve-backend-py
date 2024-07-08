@@ -1,13 +1,7 @@
 import torch
 import argparse
 import os
-import subprocess
-import numpy
 
-from src.Util import is_image, warnAndLog
-from src.UpscaleTorch import UpscalePytorchImage
-from src.UpscaleNCNN import UpscaleNCNN
-from src.ConvertModels import ConvertModels
 from src.RenderVideo import Render
 
 
@@ -22,6 +16,7 @@ class HandleApplication:
             interpolateTimes=1,
             upscaleModel=self.args.upscaleModel,
             device="cpu",
+            backend=self.args.backend,
             precision="float32",
         )
 
@@ -37,28 +32,7 @@ class HandleApplication:
         if not self.args.cpu:
             return "cuda" if torch.cuda.is_available() else "cpu"
 
-    def getUpscaleMethod(self):
-        if self.args.backend == "ncnn":
-            self.upscaleMethod = UpscaleNCNN()
-
-    def pytorchRenderSingleImage(self, imagePath: str):
-        upscale = UpscalePytorchImage(
-            modelPath=self.args.modelPath,
-            modelName=self.args.modelName,
-            device=self.returnDevice(),
-            tile_pad=self.args.overlap,
-            dtype=self.dtype,
-        )
-        imageTensor = upscale.loadImage(imagePath)
-        upscaledTensor = (
-            upscale.renderImage(imageTensor)  # render image, tile if necessary
-            if self.args.tilesize == 0
-            else upscale.renderTiledImage(
-                image=imageTensor, tile_size=self.args.tilesize
-            )
-        )
-        upscaledImage = upscale.tensorToNPArray(upscaledTensor)
-        upscale.saveImage(upscaledImage, self.args.output)
+   
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -155,4 +129,5 @@ class HandleApplication:
 
 
 if __name__ == "__main__":
+    
     HandleApplication()

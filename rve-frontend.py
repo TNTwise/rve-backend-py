@@ -2,7 +2,7 @@ import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-from time import sleep
+from time import sleep, time
 import os
 
 from src.Util import currentDirectory
@@ -14,7 +14,9 @@ command = [
     "-o",
     "PIPE",
     "-u",
-    "2x_AnimeJaNai_V2_SuperUltraCompact_100k.pth",
+    "2x_ModernSpanimationV1.pth.ncnn",
+    "-b",
+    "ncnn"
 ]
 mainProc = subprocess.Popen(
     command,
@@ -57,7 +59,8 @@ writeProcess = subprocess.Popen(
             )
 
     
-
+outputChunk = 1280 * 4 * 720 * 3
+startTime = time()
 while True:
     '''try:
         chunk = mainProc.stdout.read(1280 * 4 * 720 * 3)
@@ -68,7 +71,11 @@ while True:
 
     except Exception as e:
         print(f"Chunk not available {e}")'''
-    frame = mainProc.stdout.read(1280 * 4 * 720 * 3)
+    
+    frame = mainProc.stdout.read(outputChunk)
+    i+=1
+    print(i/(time()-startTime))
+    print(i)
     if frame is None:
         break
     writeProcess.stdin.buffer.write(frame)
