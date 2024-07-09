@@ -15,9 +15,9 @@ class HandleApplication:
             outputFile=self.args.output,
             interpolateTimes=1,
             upscaleModel=self.args.upscaleModel,
-            device="cpu",
+            device="cuda",
             backend=self.args.backend,
-            precision="float32",
+            precision="float16" if self.args.half else "float32"
         )
 
     def setDType(self):
@@ -81,15 +81,13 @@ class HandleApplication:
             type=str,
         )
         parser.add_argument(
-            "-u",
             "--upscaleModel",
             help="Direct path to upscaling model, will automatically upscale if model is valid.",
             type=str,
         )
         parser.add_argument(
-            "-i",
             "--interpolateModel",
-            help="",
+            help="Direct path to interpolation model, will automatically upscale if model is valid.",
             type=str,
         )
         parser.add_argument(

@@ -4,7 +4,7 @@ import subprocess
 import queue
 from threading import Thread
 
-from .UpscaleTorch import UpscalePytorch, loadTorchModel
+from .UpscaleTorch import UpscalePytorch
 from .Util import currentDirectory
 from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
 
@@ -167,14 +167,14 @@ class FFMpegRender:
             stderr=subprocess.DEVNULL,
         )
 
-        for i in range(self.totalFrames):
+        for i in range(self.totalFrames - 1):
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
             self.readQueue.put(chunk)
-
-        self.readProcess.stdout.close()
-        self.readProcess.terminate()
         self.readingDone = True
         self.readQueue.put(None)
+        self.readProcess.stdout.close()
+        self.readProcess.terminate()
+        
 
     def writeOutVideoFrames(self):
         """
@@ -191,15 +191,17 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-
+            i=0
             while True:
                 frame = self.writeQueue.get()
+                
                 if frame is None:
+                    print("broken out of writeframes")
                     break
                 self.writeProcess.stdin.buffer.write(frame)
+                i+=1
 
-            self.writeProcess.stdin.close()
-            self.writeProcess.wait()
+            
 
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
@@ -208,7 +210,8 @@ class FFMpegRender:
                 if frame is None:
                     break
                 process.stdin.write(frame)
-
+        self.writeProcess.stdin.close()
+        self.writeProcess.wait()
 
 class Render(FFMpegRender):
     """
@@ -282,9 +285,10 @@ class Render(FFMpegRender):
         """
         for i in range(self.totalFrames):
             frame = self.readQueue.get()
-            frame = self.setupRender(frame)
-            if self.upscaleModel:
-                frame = self.upscale(frame)
+            if frame is not None:
+                frame = self.setupRender(frame)
+                if self.upscaleModel:
+                    frame = self.upscale(frame)
             self.writeQueue.put(frame)
 
     def setupUpscale(self):
