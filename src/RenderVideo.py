@@ -19,6 +19,8 @@ class FFMpegRender:
         encoder: str = "libx264",
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
+        overwrite: bool = False,
+        frameSetupFunction = None
     ):
         """
         Generates FFmpeg I/O commands to be used with VideoIO
@@ -29,6 +31,7 @@ class FFMpegRender:
         upscaleTimes: int,
         encoder: str, The exact name of the encoder ffmpeg will use (default=libx264)
         pixelFormat: str, The pixel format ffmpeg will use, (default=yuv420p)
+        overwrite: bool, overwrite existing output file if it exists
         """
         self.inputFile = inputFile
         self.outputFile = outputFile
@@ -40,12 +43,13 @@ class FFMpegRender:
         self.pixelFormat = pixelFormat
         self.benchmark = benchmark
         self.benchmark = False
+        self.overwrite = overwrite
         self.readingDone = False
         self.writeOutPipe = False
-
-        if self.outputFile == "PIPE":
-            self.writeOutPipe = True
-
+        self.frameSetupFunction = frameSetupFunction
+         
+        self.writeOutPipe = self.outputFile == "PIPE"
+        
         self.readQueue = queue.Queue(maxsize=50)
         self.writeQueue = queue.Queue(maxsize=50)
 
@@ -136,6 +140,7 @@ class FFMpegRender:
                     "null",
                     "-",
                 ]
+            if self.overwrite: command.append("-y")
             return command
         """else:
             
@@ -169,13 +174,16 @@ class FFMpegRender:
 
         for i in range(self.totalFrames - 1):
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
-            self.readQueue.put(chunk)
+            frame = self.setupRender(chunk)
+            self.readQueue.put(frame)
         self.readingDone = True
         self.readQueue.put(None)
         self.readProcess.stdout.close()
         self.readProcess.terminate()
         
-
+    def returnFrame(self, frame):
+        return frame
+    
     def writeOutVideoFrames(self):
         """
         Writes out frames either to ffmpeg or to pipe
@@ -240,6 +248,7 @@ class Render(FFMpegRender):
         encoder: str = "libx264",
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
+        overwrite: bool = False,
         backend="pytorch",
         interpolationMethod=None,
         upscaleModel=None,
@@ -253,6 +262,7 @@ class Render(FFMpegRender):
         self.device = device
         self.precision = precision
         self.upscaleTimes = 1  # if no upscaling, it will default to 1
+
         self.setupRender = self.returnFrame  # set it to not convert the bytes to array by default, and just pass chunk through
 
         self.getVideoProperties(inputFile)
@@ -267,6 +277,9 @@ class Render(FFMpegRender):
             encoder=encoder,
             pixelFormat=pixelFormat,
             benchmark=benchmark,
+            overwrite=overwrite,
+            frameSetupFunction=self.setupRender
+            
         )
         self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
         self.ffmpegWriteThread = Thread(target=self.writeOutVideoFrames)
@@ -275,8 +288,7 @@ class Render(FFMpegRender):
         self.ffmpegWriteThread.start()
         self.renderThread.start()
 
-    def returnFrame(self, frame):
-        return frame
+    
 
     def render(self):
         """
@@ -286,7 +298,6 @@ class Render(FFMpegRender):
         for i in range(self.totalFrames):
             frame = self.readQueue.get()
             if frame is not None:
-                frame = self.setupRender(frame)
                 if self.upscaleModel:
                     frame = self.upscale(frame)
             self.writeQueue.put(frame)

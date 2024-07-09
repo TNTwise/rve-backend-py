@@ -17,7 +17,8 @@ class HandleApplication:
             upscaleModel=self.args.upscaleModel,
             device="cuda",
             backend=self.args.backend,
-            precision="float16" if self.args.half else "float32"
+            precision="float16" if self.args.half else "float32",
+            overwrite=self.args.overwrite
         )
 
     def setDType(self):
@@ -119,13 +120,18 @@ class HandleApplication:
             default=None,
             type=str,
         )
+        parser.add_argument(
+            "--overwrite",
+            help="Overwrite output video if it already exists.",
+            action="store_true",
+        )
         return parser.parse_args()
 
     def fullModelPathandName(self):
         return os.path.join(self.args.modelPath, self.args.modelName)
 
     def checkArguments(self):
-        if os.path.isfile(self.args.output):
+        if os.path.isfile(self.args.output) and not self.args.overwrite:
             raise os.error("Output file already exists!")
 
 
