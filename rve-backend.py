@@ -129,7 +129,7 @@ class HandleApplication:
         parser.add_argument(
             "--crf",
             help="Constant rate factor for videos, lower setting means higher quality.",
-            action="store_true",
+            default='18'
         )
         return parser.parse_args()
 
