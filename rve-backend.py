@@ -18,7 +18,8 @@ class HandleApplication:
             device="cuda",
             backend=self.args.backend,
             precision="float16" if self.args.half else "float32",
-            overwrite=self.args.overwrite
+            overwrite=self.args.overwrite,
+            crf=self.args.crf
         )
 
     def setDType(self):
@@ -123,6 +124,11 @@ class HandleApplication:
         parser.add_argument(
             "--overwrite",
             help="Overwrite output video if it already exists.",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--crf",
+            help="Constant rate factor for videos, lower setting means higher quality.",
             action="store_true",
         )
         return parser.parse_args()

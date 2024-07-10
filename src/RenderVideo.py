@@ -20,7 +20,8 @@ class FFMpegRender:
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
         overwrite: bool = False,
-        frameSetupFunction = None
+        frameSetupFunction = None,
+        crf:str='18'
     ):
         """
         Generates FFmpeg I/O commands to be used with VideoIO
@@ -46,6 +47,7 @@ class FFMpegRender:
         self.overwrite = overwrite
         self.readingDone = False
         self.writeOutPipe = False
+        self.crf = crf
         self.frameSetupFunction = frameSetupFunction
          
         self.writeOutPipe = self.outputFile == "PIPE"
@@ -109,7 +111,7 @@ class FFMpegRender:
                     "-c:v",
                     self.encoder,
                     f"-crf",
-                    f"18",
+                    f"{self.crf}",
                     "-pix_fmt",
                     self.pixelFormat,
                     "-c:a",
@@ -143,7 +145,6 @@ class FFMpegRender:
             if self.overwrite: command.append("-y")
             return command
         """else:
-            
             command = [
             f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
             "-f",
@@ -208,9 +209,6 @@ class FFMpegRender:
                     break
                 self.writeProcess.stdin.buffer.write(frame)
                 i+=1
-
-            
-
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
             while True:
@@ -237,7 +235,6 @@ class Render(FFMpegRender):
     backend (pytorch,ncnn)
     device (cpu,cuda)
     precision (float16,float32)
-
     """
 
     def __init__(
@@ -249,6 +246,7 @@ class Render(FFMpegRender):
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
         overwrite: bool = False,
+        crf:str='18',
         backend="pytorch",
         interpolationMethod=None,
         upscaleModel=None,
@@ -278,7 +276,8 @@ class Render(FFMpegRender):
             pixelFormat=pixelFormat,
             benchmark=benchmark,
             overwrite=overwrite,
-            frameSetupFunction=self.setupRender
+            frameSetupFunction=self.setupRender,
+            crf=crf
             
         )
         self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
