@@ -3851,8 +3851,7 @@ class UpscaleNCNN:
         frame = frame.transpose(1, 2, 0)
         return np.ascontiguousarray(frame, dtype=np.uint8)"""
 
-    def setWidthAndHeight(self, frame):
-        return frame
+    
 
     def Upscale(self, imageChunk):
         output = self.model.process_bytes(imageChunk, self.width, self.height, 3)

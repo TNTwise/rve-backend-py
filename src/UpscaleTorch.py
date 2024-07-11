@@ -37,7 +37,7 @@ class UpscalePytorch:
         if precision == "float16":
             return torch.float16
 
-    def loadModel(
+    def loadModel (
         self,modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
     ) -> ImageModelDescriptor:
         model = ModelLoader().load_from_file(modelPath)

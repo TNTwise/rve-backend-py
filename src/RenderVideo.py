@@ -3,7 +3,7 @@ from threading import Thread
 from .UpscaleTorch import UpscalePytorch
 from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
 from .FFmpeg import FFMpegRender
-
+from .InterpolateNCNN import InterpolateRIFENCNN
 class Render(FFMpegRender):
     """
     Subclass of FFmpegRender
@@ -26,7 +26,7 @@ class Render(FFMpegRender):
         self,
         inputFile: str,
         outputFile: str,
-        interpolateTimes: int = 1,
+        interpolateFactor: int = 1,
         encoder: str = "libx264",
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
@@ -45,17 +45,22 @@ class Render(FFMpegRender):
         self.device = device
         self.precision = precision
         self.upscaleTimes = 1  # if no upscaling, it will default to 1
-
+        self.interpolateFactor = interpolateFactor
         self.setupRender = self.returnFrame  # set it to not convert the bytes to array by default, and just pass chunk through
-
+        self.frame0 = None
+        
         self.getVideoProperties(inputFile)
         if upscaleModel:
             self.setupUpscale()
+            self.renderThread = Thread(target=self.renderUpscale)
+        if interpolateModel:
+            self.setupInterpolate()
+            self.renderThread = Thread(target=self.renderInterpolate)
 
         super().__init__(
             inputFile=inputFile,
             outputFile=outputFile,
-            interpolateTimes=interpolateTimes,
+            interpolateFactor=interpolateFactor,
             upscaleTimes=self.upscaleTimes,
             encoder=encoder,
             pixelFormat=pixelFormat,
@@ -67,14 +72,13 @@ class Render(FFMpegRender):
         )
         self.ffmpegReadThread = Thread(target=self.readinVideoFrames)
         self.ffmpegWriteThread = Thread(target=self.writeOutVideoFrames)
-        self.renderThread = Thread(target=self.render)
+        
         self.ffmpegReadThread.start()
         self.ffmpegWriteThread.start()
         self.renderThread.start()
 
     
-
-    def render(self):
+    def renderUpscale(self):
         """
         self.setupRender, method that is mapped to the bytesToFrame in each respective backend
         self.upscale, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
@@ -82,10 +86,30 @@ class Render(FFMpegRender):
         for i in range(self.totalFrames):
             frame = self.readQueue.get()
             if frame is not None:
-                if self.upscaleModel:
                     frame = self.upscale(frame)
             self.writeQueue.put(frame)
 
+    def returnTimeStep(interpolationFactor, frame):
+        return 1 / (interpolationFactor - frame)
+
+    def renderInterpolate(self):
+        """
+        self.setupRender, method that is mapped to the bytesToFrame in each respective backend
+        self.interpoate, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
+        """
+        
+        for i in range(self.totalFrames):
+            if self.frame0:
+                frame1 = self.readQueue.get()
+                if frame1 is not None:
+                    for n in range(self.interpolateFactor):
+                        frame = self.interpolate(self.frame0,frame1, 1 / (self.interpolateFactor - n))
+                        self.writeQueue.put(frame)
+                else:
+                    self.writeQueue.put(None)
+                self.frame0 = frame1
+            else:
+                self.frame0 = self.readQueue.get()
     def setupUpscale(self):
         """
         This is called to setup an upscaling model if it exists.
@@ -115,8 +139,14 @@ class Render(FFMpegRender):
                 width=self.width,
                 height=self.height,
             )
-            self.setupRender = upscaleNCNN.setWidthAndHeight
+            self.setupRender = self.returnFrame
             self.upscale = upscaleNCNN.Upscale
 
-    def interpolate(self):
-        pass
+    def setupInterpolate(self):
+        if self.backend == "ncnn":
+            interpolateRifeNCNN =  InterpolateRIFENCNN(
+                interpolateModel=self.interpolateModel,
+                width=self.width,
+                height=self.height,)
+            self.setupRender = interpolateRifeNCNN.bytesToByteArray
+            self.interpolate = interpolateRifeNCNN.process

@@ -11,7 +11,7 @@ class FFMpegRender:
         self,
         inputFile: str,
         outputFile: str,
-        interpolateTimes: int = 1,
+        interpolateFactor: int = 1,
         upscaleTimes: int = 1,
         encoder: str = "libx264",
         pixelFormat: str = "yuv420p",
@@ -36,7 +36,7 @@ class FFMpegRender:
 
         # upsacletimes will be set to the scale of the loaded model with spandrel
         self.upscaleTimes = upscaleTimes
-        self.interpolateTimes = interpolateTimes
+        self.interpolateFactor = interpolateFactor
         self.encoder = encoder
         self.pixelFormat = pixelFormat
         self.benchmark = benchmark
@@ -100,7 +100,7 @@ class FFMpegRender:
                     "-s",
                     f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
                     "-r",
-                    f"{self.fps * self.interpolateTimes}",
+                    f"{self.fps * self.interpolateFactor}",
                     "-i",
                     "-",
                     "-i",

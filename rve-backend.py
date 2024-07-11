@@ -13,7 +13,8 @@ class HandleApplication:
         ffmpegSettings = Render(
             inputFile=self.args.input,
             outputFile=self.args.output,
-            interpolateTimes=1,
+            interpolateModel=self.args.interpolateModel,
+            interpolateFactor=self.args.interpolateFactor,
             upscaleModel=self.args.upscaleModel,
             device="cuda",
             backend=self.args.backend,
@@ -91,6 +92,12 @@ class HandleApplication:
             "--interpolateModel",
             help="Direct path to interpolation model, will automatically upscale if model is valid.",
             type=str,
+        )
+        parser.add_argument(
+            "--interpolateFactor",
+            help="Multiplier for interpolation",
+            type=int,
+            default=2
         )
         parser.add_argument(
             "-c",
