@@ -17,8 +17,8 @@ class FFMpegRender:
         pixelFormat: str = "yuv420p",
         benchmark: bool = False,
         overwrite: bool = False,
-        frameSetupFunction = None,
-        crf:str='18'
+        frameSetupFunction=None,
+        crf: str = "18",
     ):
         """
         Generates FFmpeg I/O commands to be used with VideoIO
@@ -46,9 +46,9 @@ class FFMpegRender:
         self.writeOutPipe = False
         self.crf = crf
         self.frameSetupFunction = frameSetupFunction
-         
+
         self.writeOutPipe = self.outputFile == "PIPE"
-        
+
         self.readQueue = queue.Queue(maxsize=50)
         self.writeQueue = queue.Queue(maxsize=50)
 
@@ -139,29 +139,10 @@ class FFMpegRender:
                     "null",
                     "-",
                 ]
-            if self.overwrite: command.append("-y")
+            if self.overwrite:
+                command.append("-y")
             return command
-        """else:
-            command = [
-            f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
-            "-f",
-            "rawvideo",
-            "-pix_fmt",
-            "rgb24",
-            "-vcodec",
-            "rawvideo",
-            "-s",
-            f"{self.width * self.upscaleTimes}x{self.height * self.upscaleTimes}",
-            "-r",
-            f"{self.fps * self.interpolateTimes}",
-            "-i",
-            f"-",
-            "-pix_fmt",
-            "rgb24", 
-            '-f', 
-            'rawvideo',
-            "-",
-        ]"""
+        
 
     def readinVideoFrames(self):
         self.readProcess = subprocess.Popen(
@@ -175,13 +156,12 @@ class FFMpegRender:
             frame = self.setupRender(chunk)
             self.readQueue.put(frame)
         self.readingDone = True
-        self.readQueue.put(None)
         self.readProcess.stdout.close()
         self.readProcess.terminate()
-        
+
     def returnFrame(self, frame):
         return frame
-    
+
     def writeOutVideoFrames(self):
         """
         Writes out frames either to ffmpeg or to pipe
@@ -197,21 +177,14 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-            i=0
-            while True:
+            for i in range(self.totalFrames * self.interpolateFactor - 1):
                 frame = self.writeQueue.get()
-                
-                if frame is None:
-                    print("broken out of writeframes")
-                    break
                 self.writeProcess.stdin.buffer.write(frame)
-                i+=1
+
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
-            while True:
+            for i in range(self.totalFrames * self.interpolateFactor - 1):
                 frame = self.writeQueue.get()
-                if frame is None:
-                    break
                 process.stdin.write(frame)
         self.writeProcess.stdin.close()
         self.writeProcess.wait()

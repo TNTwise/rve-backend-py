@@ -1,6 +1,6 @@
-
-
 from rife_ncnn_vulkan_python import Rife
+
+
 class InterpolateRIFENCNN:
     def __init__(
         self,
@@ -14,12 +14,17 @@ class InterpolateRIFENCNN:
         self.width = width
         self.height = height
         self.render = Rife(
-            gpuid=gpuid, num_threads=threads, model=self.interpolateModel, uhd_mode=False, channels=3, height=height, width=width
+            gpuid=gpuid,
+            num_threads=threads,
+            model=self.interpolateModel,
+            uhd_mode=False,
+            channels=3,
+            height=height,
+            width=width,
         )
-    
+
     def process(self, img0, img1, timestep) -> bytes:
-        return bytes(self.render.process_bytes(img0,img1,timestep))
-        
-    
+        return bytes(self.render.process_bytes(img0, img1, timestep))
+
     def bytesToByteArray(self, bytes):
         return bytearray(bytes)

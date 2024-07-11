@@ -19,7 +19,6 @@ class UpscalePytorch:
         height: int = 1080,
     ):
         # Only importing if necessary
-        
 
         self.tile_pad = tile_pad
         self.dtype = self.handlePrecision(precision)
@@ -30,15 +29,15 @@ class UpscalePytorch:
         self.scale = self.model.scale
         self.width = width
         self.height = height
-    
-    def handlePrecision(self,precision):
+
+    def handlePrecision(self, precision):
         if precision == "float32":
             return torch.float32
         if precision == "float16":
             return torch.float16
 
-    def loadModel (
-        self,modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
+    def loadModel(
+        self, modelPath: str, dtype: torch.dtype = torch.float32, device: str = "cuda"
     ) -> ImageModelDescriptor:
         model = ModelLoader().load_from_file(modelPath)
         assert isinstance(model, ImageModelDescriptor)

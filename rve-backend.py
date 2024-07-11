@@ -20,7 +20,7 @@ class HandleApplication:
             backend=self.args.backend,
             precision="float16" if self.args.half else "float32",
             overwrite=self.args.overwrite,
-            crf=self.args.crf
+            crf=self.args.crf,
         )
 
     def setDType(self):
@@ -97,7 +97,7 @@ class HandleApplication:
             "--interpolateFactor",
             help="Multiplier for interpolation",
             type=int,
-            default=2
+            default=2,
         )
         parser.add_argument(
             "-c",
@@ -136,7 +136,7 @@ class HandleApplication:
         parser.add_argument(
             "--crf",
             help="Constant rate factor for videos, lower setting means higher quality.",
-            default='18'
+            default="18",
         )
         return parser.parse_args()
 
