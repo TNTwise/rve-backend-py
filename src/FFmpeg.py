@@ -5,7 +5,6 @@ import queue
 
 from .Util import currentDirectory
 
-
 class FFMpegRender:
     def __init__(
         self,
@@ -150,7 +149,6 @@ class FFMpegRender:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
         )
-
         for i in range(self.totalFrames - 1):
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
             frame = self.setupRender(chunk)
@@ -177,13 +175,14 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-            for i in range(self.totalFrames * self.interpolateFactor - 1):
+
+            for i in range((self.totalFrames-self.interpolateFactor) * self.interpolateFactor): # decrease the multiplier by the interpolate factor, this is to prevent ffmpeg from hanging at the end due to no frames being written out.
                 frame = self.writeQueue.get()
                 self.writeProcess.stdin.buffer.write(frame)
-
+                
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
-            for i in range(self.totalFrames * self.interpolateFactor - 1):
+            for i in range((self.totalFrames-self.interpolateFactor) * self.interpolateFactor): # decrease the multiplier by the interpolate factor, this is to prevent ffmpeg from hanging at the end due to no frames being written out.
                 frame = self.writeQueue.get()
                 process.stdin.write(frame)
         self.writeProcess.stdin.close()
