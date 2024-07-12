@@ -170,7 +170,7 @@ class FFMpegRender:
         A command like this is required,
         ffmpeg -f rawvideo -pix_fmt rgb24 -s 1920x1080 -framerate 24 -i - -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy out.mp4
         """
-
+        startTime = time.time()
         if self.writeOutPipe == False:
             self.writeProcess = subprocess.Popen(
                 self.getFFmpegWriteCommand(),
@@ -178,13 +178,13 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-            startTime = time.time()
+            
             while True:
                 frame = self.writeQueue.get()
                 if frame is None:
                     break
                 self.writeProcess.stdin.buffer.write(frame)
-            renderTime = time.time() - startTime
+            
             
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
@@ -195,4 +195,5 @@ class FFMpegRender:
                 process.stdin.write(frame)
         self.writeProcess.stdin.close()
         self.writeProcess.wait()
+        renderTime = time.time() - startTime
         print(f"Time to complete render: {round(renderTime, 2)}")
