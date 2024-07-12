@@ -95,7 +95,7 @@ class Render(FFMpegRender):
         self.interpoate, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
         """
         self.frame0 = self.readQueue.get()
-        for frameNum in range(self.totalFrames - self.interpolateFactor):
+        for frameNum in range(self.totalFrames - 2):
             frame1 = self.readQueue.get()
             for n in range(self.interpolateFactor):
                 frame = self.interpolate(
