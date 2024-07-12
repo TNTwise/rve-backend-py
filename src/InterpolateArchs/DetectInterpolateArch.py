@@ -13,7 +13,7 @@ from .RIFE import rife46IFNET, rife413IFNET
 
 rife_archs = [rife46IFNET, rife413IFNET]
 
-class loadModel:
+class loadInterpolationModel:
     """
     Pass in a state dict of a rife model, and will automatically load the correct architecture.
     """
@@ -27,11 +27,11 @@ class loadModel:
                 return arch
         return None  # Return None if no architecture is detected
 
-    def getIFnet(self) -> torch.nn.Module:
+    def getIFnet(self,scale:int=1,ensemble:bool=False) -> torch.nn.Module:
         if self.arch is not None:
             # Access attributes from the detected architecture
             # Example: if arch has an attribute called 'some_attribute'
-            return self.arch.IFNet
+            return self.arch.IFNet(scale,ensemble)
         else:
             print("No matching architecture found.")
 
