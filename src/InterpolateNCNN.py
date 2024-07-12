@@ -4,19 +4,19 @@ from rife_ncnn_vulkan_python import Rife
 class InterpolateRIFENCNN:
     def __init__(
         self,
-        interpolateModel: str,
+        interpolateModelPath: str,
         width: int = 1920,
         height: int = 1080,
         threads: int = 1,
         gpuid: int = 0,
     ):
-        self.interpolateModel = interpolateModel
+        self.interpolateModelPath = interpolateModelPath
         self.width = width
         self.height = height
         self.render = Rife(
             gpuid=gpuid,
             num_threads=threads,
-            model=self.interpolateModel,
+            model=self.interpolateModelPath,
             uhd_mode=False,
             channels=3,
             height=height,

@@ -6,6 +6,7 @@ import time
 
 from .Util import currentDirectory
 
+
 class FFMpegRender:
     def __init__(
         self,
@@ -48,7 +49,9 @@ class FFMpegRender:
         self.frameSetupFunction = frameSetupFunction
 
         self.writeOutPipe = self.outputFile == "PIPE"
-        self.totalFramesToRender = (self.totalFrames-self.interpolateFactor) * self.interpolateFactor
+        self.totalFramesToRender = (
+            self.totalFrames - self.interpolateFactor
+        ) * self.interpolateFactor
 
         self.readQueue = queue.Queue(maxsize=50)
         self.writeQueue = queue.Queue(maxsize=50)
@@ -143,7 +146,6 @@ class FFMpegRender:
             if self.overwrite:
                 command.append("-y")
             return command
-        
 
     def readinVideoFrames(self):
         self.readProcess = subprocess.Popen(
@@ -178,14 +180,13 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-            
+
             while True:
                 frame = self.writeQueue.get()
                 if frame is None:
                     break
                 self.writeProcess.stdin.buffer.write(frame)
-            
-            
+
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
             while True:

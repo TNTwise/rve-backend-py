@@ -79,7 +79,7 @@ class HandleApplication:
         parser.add_argument(
             "-b",
             "--backend",
-            help="backend used to upscale image. (pytorch/ncnn, default=pytorch)",
+            help="backend used to upscale image. (pytorch/ncnn/tensorrt, default=pytorch)",
             default="pytorch",
             type=str,
         )

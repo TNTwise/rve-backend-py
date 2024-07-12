@@ -4,6 +4,7 @@ from .UpscaleTorch import UpscalePytorch
 from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
 from .FFmpeg import FFMpegRender
 from .InterpolateNCNN import InterpolateRIFENCNN
+from .InterpolateTorch import InterpolateRifeTorch
 
 
 class Render(FFMpegRender):
@@ -19,7 +20,7 @@ class Render(FFMpegRender):
     RenderOptions:
     interpolationMethod
     upscaleModel
-    backend (pytorch,ncnn)
+    backend (pytorch,ncnn,tensorrt)
     device (cpu,cuda)
     precision (float16,float32)
     """
@@ -89,6 +90,7 @@ class Render(FFMpegRender):
             self.writeQueue.put(frame)
         self.writeQueue.put(None)
         print("Done with Upscale")
+
     def renderInterpolate(self):
         """
         self.setupRender, method that is mapped to the bytesToFrame in each respective backend
@@ -102,10 +104,11 @@ class Render(FFMpegRender):
                     self.frame0, frame1, 1 / (self.interpolateFactor - n)
                 )
                 self.writeQueue.put(frame)
-            
+
             self.frame0 = frame1
         self.writeQueue.put(None)
         print("Done with interpolation")
+
     def setupUpscale(self):
         """
         This is called to setup an upscaling model if it exists.
@@ -141,9 +144,18 @@ class Render(FFMpegRender):
     def setupInterpolate(self):
         if self.backend == "ncnn":
             interpolateRifeNCNN = InterpolateRIFENCNN(
-                interpolateModel=self.interpolateModel,
+                interpolateModelPath=self.interpolateModel,
                 width=self.width,
                 height=self.height,
             )
             self.setupRender = interpolateRifeNCNN.bytesToByteArray
             self.interpolate = interpolateRifeNCNN.process
+        if self.backend == "pytorch":
+            interpolateRifePytorch = InterpolateRifeTorch(
+                interpolateModelPath=self.interpolateModel,
+                width=self.width,
+                height=self.height,
+                device=self.device,
+                dtype=self.precision,
+                backend=self.backend,
+            )

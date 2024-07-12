@@ -1,12 +1,15 @@
 import torch
 import torch.nn as nn
 
-try: 
+try:
     from .interpolate import interpolate
 except ImportError:
     from torch.nn.functional import interpolate
 
 from .warplayer import warp
+
+def keys() -> list[str]:
+    return ['module.block0.conv0.0.0.weight', 'module.block0.conv0.0.0.bias', 'module.block0.conv0.1.0.weight', 'module.block0.conv0.1.0.bias', 'module.block0.convblock.0.beta', 'module.block0.convblock.0.conv.weight', 'module.block0.convblock.0.conv.bias', 'module.block0.convblock.1.beta', 'module.block0.convblock.1.conv.weight', 'module.block0.convblock.1.conv.bias', 'module.block0.convblock.2.beta', 'module.block0.convblock.2.conv.weight', 'module.block0.convblock.2.conv.bias', 'module.block0.convblock.3.beta', 'module.block0.convblock.3.conv.weight', 'module.block0.convblock.3.conv.bias', 'module.block0.convblock.4.beta', 'module.block0.convblock.4.conv.weight', 'module.block0.convblock.4.conv.bias', 'module.block0.convblock.5.beta', 'module.block0.convblock.5.conv.weight', 'module.block0.convblock.5.conv.bias', 'module.block0.convblock.6.beta', 'module.block0.convblock.6.conv.weight', 'module.block0.convblock.6.conv.bias', 'module.block0.convblock.7.beta', 'module.block0.convblock.7.conv.weight', 'module.block0.convblock.7.conv.bias', 'module.block0.lastconv.0.weight', 'module.block0.lastconv.0.bias', 'module.block1.conv0.0.0.weight', 'module.block1.conv0.0.0.bias', 'module.block1.conv0.1.0.weight', 'module.block1.conv0.1.0.bias', 'module.block1.convblock.0.beta', 'module.block1.convblock.0.conv.weight', 'module.block1.convblock.0.conv.bias', 'module.block1.convblock.1.beta', 'module.block1.convblock.1.conv.weight', 'module.block1.convblock.1.conv.bias', 'module.block1.convblock.2.beta', 'module.block1.convblock.2.conv.weight', 'module.block1.convblock.2.conv.bias', 'module.block1.convblock.3.beta', 'module.block1.convblock.3.conv.weight', 'module.block1.convblock.3.conv.bias', 'module.block1.convblock.4.beta', 'module.block1.convblock.4.conv.weight', 'module.block1.convblock.4.conv.bias', 'module.block1.convblock.5.beta', 'module.block1.convblock.5.conv.weight', 'module.block1.convblock.5.conv.bias', 'module.block1.convblock.6.beta', 'module.block1.convblock.6.conv.weight', 'module.block1.convblock.6.conv.bias', 'module.block1.convblock.7.beta', 'module.block1.convblock.7.conv.weight', 'module.block1.convblock.7.conv.bias', 'module.block1.lastconv.0.weight', 'module.block1.lastconv.0.bias', 'module.block2.conv0.0.0.weight', 'module.block2.conv0.0.0.bias', 'module.block2.conv0.1.0.weight', 'module.block2.conv0.1.0.bias', 'module.block2.convblock.0.beta', 'module.block2.convblock.0.conv.weight', 'module.block2.convblock.0.conv.bias', 'module.block2.convblock.1.beta', 'module.block2.convblock.1.conv.weight', 'module.block2.convblock.1.conv.bias', 'module.block2.convblock.2.beta', 'module.block2.convblock.2.conv.weight', 'module.block2.convblock.2.conv.bias', 'module.block2.convblock.3.beta', 'module.block2.convblock.3.conv.weight', 'module.block2.convblock.3.conv.bias', 'module.block2.convblock.4.beta', 'module.block2.convblock.4.conv.weight', 'module.block2.convblock.4.conv.bias', 'module.block2.convblock.5.beta', 'module.block2.convblock.5.conv.weight', 'module.block2.convblock.5.conv.bias', 'module.block2.convblock.6.beta', 'module.block2.convblock.6.conv.weight', 'module.block2.convblock.6.conv.bias', 'module.block2.convblock.7.beta', 'module.block2.convblock.7.conv.weight', 'module.block2.convblock.7.conv.bias', 'module.block2.lastconv.0.weight', 'module.block2.lastconv.0.bias', 'module.block3.conv0.0.0.weight', 'module.block3.conv0.0.0.bias', 'module.block3.conv0.1.0.weight', 'module.block3.conv0.1.0.bias', 'module.block3.convblock.0.beta', 'module.block3.convblock.0.conv.weight', 'module.block3.convblock.0.conv.bias', 'module.block3.convblock.1.beta', 'module.block3.convblock.1.conv.weight', 'module.block3.convblock.1.conv.bias', 'module.block3.convblock.2.beta', 'module.block3.convblock.2.conv.weight', 'module.block3.convblock.2.conv.bias', 'module.block3.convblock.3.beta', 'module.block3.convblock.3.conv.weight', 'module.block3.convblock.3.conv.bias', 'module.block3.convblock.4.beta', 'module.block3.convblock.4.conv.weight', 'module.block3.convblock.4.conv.bias', 'module.block3.convblock.5.beta', 'module.block3.convblock.5.conv.weight', 'module.block3.convblock.5.conv.bias', 'module.block3.convblock.6.beta', 'module.block3.convblock.6.conv.weight', 'module.block3.convblock.6.conv.bias', 'module.block3.convblock.7.beta', 'module.block3.convblock.7.conv.weight', 'module.block3.convblock.7.conv.bias', 'module.block3.lastconv.0.weight', 'module.block3.lastconv.0.bias', 'module.encode.cnn0.weight', 'module.encode.cnn0.bias', 'module.encode.cnn1.weight', 'module.encode.cnn1.bias', 'module.encode.cnn2.weight', 'module.encode.cnn2.bias', 'module.encode.cnn3.weight', 'module.encode.cnn3.bias']
 
 def conv(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
@@ -21,6 +24,7 @@ def conv(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
         ),
         nn.LeakyReLU(0.2, True),
     )
+
 
 def conv_bn(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=1):
     return nn.Sequential(
@@ -37,6 +41,7 @@ def conv_bn(in_planes, out_planes, kernel_size=3, stride=1, padding=1, dilation=
         nn.LeakyReLU(0.2, True),
     )
 
+
 class MyPixelShuffle(nn.Module):
     def __init__(self, upscale_factor):
         super(MyPixelShuffle, self).__init__()
@@ -51,7 +56,7 @@ class MyPixelShuffle(nn.Module):
             b, out_channel, self.upscale_factor, self.upscale_factor, hh, hw
         )
         return x_view.permute(0, 1, 4, 2, 5, 3).reshape(b, out_channel, h, w)
-    
+
 
 class Head(nn.Module):
     def __init__(self):
@@ -84,6 +89,7 @@ class ResConv(nn.Module):
 
     def forward(self, x):
         return self.relu(self.conv(x) * self.beta + x)
+
 
 class IFBlock(nn.Module):
     def __init__(self, in_planes, c=64):
