@@ -87,14 +87,15 @@ class Render(FFMpegRender):
             frame = self.readQueue.get()
             frame = self.upscale(frame)
             self.writeQueue.put(frame)
-
+        self.writeQueue.put(None)
+        print("Done with Upscale")
     def renderInterpolate(self):
         """
         self.setupRender, method that is mapped to the bytesToFrame in each respective backend
         self.interpoate, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
         """
         self.frame0 = self.readQueue.get()
-        for frameNum in range(self.totalFrames - 1):
+        for frameNum in range(self.totalFrames - self.interpolateFactor):
             frame1 = self.readQueue.get()
             for n in range(self.interpolateFactor):
                 frame = self.interpolate(
@@ -104,7 +105,7 @@ class Render(FFMpegRender):
             
             self.frame0 = frame1
         self.writeQueue.put(None)
-
+        print("Done with interpolation")
     def setupUpscale(self):
         """
         This is called to setup an upscaling model if it exists.

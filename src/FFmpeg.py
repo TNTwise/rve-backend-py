@@ -2,6 +2,7 @@ import cv2
 import os
 import subprocess
 import queue
+import time
 
 from .Util import currentDirectory
 
@@ -47,6 +48,7 @@ class FFMpegRender:
         self.frameSetupFunction = frameSetupFunction
 
         self.writeOutPipe = self.outputFile == "PIPE"
+        self.totalFramesToRender = (self.totalFrames-self.interpolateFactor) * self.interpolateFactor
 
         self.readQueue = queue.Queue(maxsize=50)
         self.writeQueue = queue.Queue(maxsize=50)
@@ -153,6 +155,7 @@ class FFMpegRender:
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
             frame = self.setupRender(chunk)
             self.readQueue.put(frame)
+        self.readQueue.put(None)
         self.readingDone = True
         self.readProcess.stdout.close()
         self.readProcess.terminate()
@@ -175,15 +178,21 @@ class FFMpegRender:
                 text=True,
                 universal_newlines=True,
             )
-
-            for i in range((self.totalFrames-self.interpolateFactor) * self.interpolateFactor): # decrease the multiplier by the interpolate factor, this is to prevent ffmpeg from hanging at the end due to no frames being written out.
+            startTime = time.time()
+            while True:
                 frame = self.writeQueue.get()
+                if frame is None:
+                    break
                 self.writeProcess.stdin.buffer.write(frame)
-                
+            renderTime = time.time() - startTime
+            
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
-            for i in range((self.totalFrames-self.interpolateFactor) * self.interpolateFactor): # decrease the multiplier by the interpolate factor, this is to prevent ffmpeg from hanging at the end due to no frames being written out.
+            while True:
                 frame = self.writeQueue.get()
+                if frame is None:
+                    break
                 process.stdin.write(frame)
         self.writeProcess.stdin.close()
         self.writeProcess.wait()
+        print(f"Time to complete render: {round(renderTime, 2)}")
