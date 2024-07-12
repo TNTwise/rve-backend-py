@@ -11,7 +11,7 @@ from .warplayer import warp
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
+def id(): return "rife46"
 def keys() -> list[str]:
     return [
     "module.block0.conv0.0.0.weight",
