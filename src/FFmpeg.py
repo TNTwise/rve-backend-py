@@ -41,7 +41,6 @@ class FFMpegRender:
         self.encoder = encoder
         self.pixelFormat = pixelFormat
         self.benchmark = benchmark
-        self.benchmark = False
         self.overwrite = overwrite
         self.readingDone = False
         self.writeOutPipe = False
@@ -120,6 +119,7 @@ class FFMpegRender:
                     f"{self.outputFile}",
                 ]
             else:
+                print("Using benchmark mode")
                 command = [
                     f"{os.path.join(currentDirectory(),'bin','ffmpeg')}",
                     "-y",
@@ -135,7 +135,7 @@ class FFMpegRender:
                     "-pix_fmt",
                     f"yuv420p",
                     "-r",
-                    f"{self.fps * self.interpolateTimes}",
+                    f"{self.fps * self.interpolateFactor}",
                     "-i",
                     "-",
                     "-benchmark",

@@ -7,7 +7,7 @@ from .InterpolateArchs.DetectInterpolateArch import loadInterpolationModel
 from .Util import currentDirectory
 
 torch.set_float32_matmul_precision("high")
-
+torch.set_grad_enabled(False)
 
 class InterpolateRifeTorch:
     @torch.inference_mode()
@@ -27,14 +27,14 @@ class InterpolateRifeTorch:
         trt_max_shape: list[int] = [1920, 1080],
         trt_workspace_size: int = 0,
         trt_max_aux_streams: int | None = None,
-        trt_optimization_level: int | None = None,
+        trt_optimization_level: int = 5,
         trt_cache_dir: str = currentDirectory(),
         trt_debug: bool = False,
     ):
         self.interpolateModel = interpolateModelPath
         self.width = width
         self.height = height
-        self.device = torch.device("cuda", 0) # 0 is the device index, may have to change later
+        self.device = torch.device(device, 0) # 0 is the device index, may have to change later
         self.dtype = self.handlePrecision(dtype)
         self.backend = backend
         scale = 1
@@ -53,14 +53,14 @@ class InterpolateRifeTorch:
         state_dict = {
             k.replace("module.", ""): v for k, v in state_dict.items() if "module." in k
         }
-        self.flownet.eval().to(device=self.device).load_state_dict(
-            state_dict=state_dict, assign=True, strict=True
+        self.flownet.load_state_dict(
+            state_dict=state_dict, strict=False
         )
-
+        self.flownet.eval().to(device=self.device)
         if self.dtype == torch.float16:
             self.flownet.half()
 
-        tmp = max(32, int(64 / scale))
+        tmp = max(32, int(32 / scale))
         self.pw = math.ceil(self.width / tmp) * tmp
         self.ph = math.ceil(self.height / tmp) * tmp
         self.padding = (0, self.pw - self.width, 0, self.ph - self.height)
@@ -104,7 +104,7 @@ class InterpolateRifeTorch:
                     + f"_{'fp16' if self.dtype == torch.float16 else 'fp32'}"
                     + f"_scale-{scale}"
                     + f"_ensemble-{ensemble}"
-                    + f"_{torch.cuda.get_device_name(device)}"
+                    + f"_{torch.cuda.get_device_name(self.device)}"
                     + f"_trt-{tensorrt.__version__}"
                     + (
                         f"_workspace-{trt_workspace_size}"
@@ -224,12 +224,15 @@ class InterpolateRifeTorch:
     @torch.inference_mode()
     def process(self, img0, img1, timestep):
         if timestep == 1:
-            return self.tensor_to_frame(img1[:, :, : self.height, : self.width])
+            return self.tensor_to_frame(img1[:, :, : self.height, : self.width][0])
         if timestep == 0:
-            return self.tensor_to_frame(img0[:, :, : self.height, : self.width])
+            return self.tensor_to_frame(img0[:, :, : self.height, : self.width][0])
+        
+
         timestep = torch.full(
             (1, 1, self.ph, self.pw), timestep, dtype=self.dtype, device=self.device
         )
+
 
         output = self.flownet(
             img0, img1, timestep, self.tenFlow_div, self.backwarp_tenGrid
@@ -252,15 +255,10 @@ class InterpolateRifeTorch:
 
     @torch.inference_mode()
     def frame_to_tensor(self, frame) -> torch.Tensor:
-        output = (
-            torch.frombuffer(frame, dtype=torch.uint8)
-            .reshape(self.height, self.width, 3)
-            .to(self.device, non_blocking=True, dtype=self.dtype)
-            .permute(2, 0, 1)
-            .unsqueeze(0)
-            .mul_(1 / 255)
-            .clamp(0.0, 1.0)
+        frame = torch.frombuffer(frame, dtype=torch.uint8).reshape(
+            self.height, self.width, 3
         )
-
-        output = F.pad(output, self.padding)
-        return output
+        return F.pad((frame).permute(2, 0, 1).unsqueeze(0).to(
+            self.device, dtype=self.dtype
+        ) / 255.0, self.padding)
+        
