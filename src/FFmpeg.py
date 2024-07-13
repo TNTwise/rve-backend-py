@@ -155,8 +155,7 @@ class FFMpegRender:
         )
         for i in range(self.totalFrames - 1):
             chunk = self.readProcess.stdout.read(self.frameChunkSize)
-            frame = self.setupRender(chunk)
-            self.readQueue.put(frame)
+            self.readQueue.put(chunk)
         self.readQueue.put(None)
         self.readingDone = True
         self.readProcess.stdout.close()

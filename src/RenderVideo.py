@@ -86,7 +86,7 @@ class Render(FFMpegRender):
         """
         for i in range(self.totalFrames - 1):
             frame = self.readQueue.get()
-            frame = self.upscale(frame)
+            frame = self.upscale(self.setupRender(frame))
             self.writeQueue.put(frame)
         self.writeQueue.put(None)
         print("Done with Upscale")
@@ -96,16 +96,19 @@ class Render(FFMpegRender):
         self.setupRender, method that is mapped to the bytesToFrame in each respective backend
         self.interpoate, method that takes in a chunk, and outputs an array that can be sent to ffmpeg
         """
-        self.frame0 = self.readQueue.get()
-        for frameNum in range(self.totalFrames - 2):
+        self.frame0 = self.setupRender(self.readQueue.get())
+        while True:
             frame1 = self.readQueue.get()
+            if frame1 is None:
+                break
+            frame1 = self.setupRender(frame1)
             for n in range(self.interpolateFactor):
                 frame = self.interpolate(
                     self.frame0, frame1, 1 / (self.interpolateFactor - n)
                 )
                 self.writeQueue.put(frame)
 
-            self.frame0 = frame1
+            self.frame0 = frame1.clone()
         self.writeQueue.put(None)
         print("Done with interpolation")
 
@@ -159,3 +162,5 @@ class Render(FFMpegRender):
                 dtype=self.precision,
                 backend=self.backend,
             )
+            self.setupRender = interpolateRifePytorch.frame_to_tensor
+            self.interpolate = interpolateRifePytorch.process
