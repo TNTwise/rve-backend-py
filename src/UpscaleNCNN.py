@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from typing import TypeVar
 import sys
-
+from upscale_ncnn_py import UPSCALE
 
 import cv2
 
@@ -3800,7 +3800,7 @@ class UpscaleNCNN:
         height: int = 1080,
     ):
         # only import if necessary
-        from upscale_ncnn_py import UPSCALE
+        
 
         self.model = UPSCALE(
             gpuid=gpuid, model_str=modelPath, num_threads=num_threads, scale=scale

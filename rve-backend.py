@@ -1,4 +1,3 @@
-import torch
 import argparse
 import os
 
@@ -9,7 +8,6 @@ class HandleApplication:
     def __init__(self):
         self.args = self.handleArguments()
         self.checkArguments()
-        self.setDType()
         ffmpegSettings = Render(
             inputFile=self.args.input,
             outputFile=self.args.output,
@@ -24,17 +22,6 @@ class HandleApplication:
             benchmark=self.args.benchmark
         )
 
-    def setDType(self):
-        if self.args.half:
-            self.dtype = torch.half
-        elif self.args.bfloat16:
-            self.dtype = torch.bfloat16
-        else:
-            self.dtype = torch.float32
-
-    def returnDevice(self):
-        if not self.args.cpu:
-            return "cuda" if torch.cuda.is_available() else "cpu"
 
     def handleArguments(self) -> argparse.ArgumentParser:
         """_summary_
@@ -150,6 +137,30 @@ class HandleApplication:
         return os.path.join(self.args.modelPath, self.args.modelName)
 
     def checkArguments(self):
+        if self.args.backend == "pytorch":
+            try:
+                import torch
+                import torchvision
+                import spandrel
+            except ImportError as e:
+                raise ImportError(f"Cannot use PyTorch as the backend! {e}")
+
+        if self.args.backend == "tensorrt":
+            try:
+                import torch
+                import torchvision
+                import spandrel
+                import tensorrt
+            except ImportError as e:
+                raise ImportError(f"Cannot use TensorRT as the backend! {e}")
+            
+        if self.args.backend == "ncnn":
+            try:
+                import rife_ncnn_vulkan_python
+                from upscale_ncnn_py import UPSCALE
+            except ImportError as e:
+                raise ImportError(f"Cannot use NCNN as the backend! {e}")
+            
         if os.path.isfile(self.args.output) and not self.args.overwrite:
             raise os.error("Output file already exists!")
 

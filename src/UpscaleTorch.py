@@ -18,7 +18,6 @@ class UpscalePytorch:
         width: int = 1920,
         height: int = 1080,
     ):
-        # Only importing if necessary
 
         self.tile_pad = tile_pad
         self.dtype = self.handlePrecision(precision)

@@ -1,12 +1,18 @@
 from threading import Thread
 
-from .UpscaleTorch import UpscalePytorch
-from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
+
 from .FFmpeg import FFMpegRender
-from .InterpolateNCNN import InterpolateRIFENCNN
-from .InterpolateTorch import InterpolateRifeTorch
 
-
+try:
+    from .UpscaleNCNN import UpscaleNCNN, getNCNNScale
+    from .InterpolateNCNN import InterpolateRIFENCNN
+except ImportError:
+    print("WARN: unable to import ncnn.")
+try:
+    from .InterpolateTorch import InterpolateRifeTorch
+    from .UpscaleTorch import UpscalePytorch
+except ImportError:
+    print("WARN: unable to import pytorch.")
 class Render(FFMpegRender):
     """
     Subclass of FFmpegRender
@@ -108,7 +114,7 @@ class Render(FFMpegRender):
                 )
                 self.writeQueue.put(frame)
 
-            self.frame0 = frame1.clone()
+            self.frame0 = frame1
         self.writeQueue.put(None)
         print("Done with interpolation")
 
