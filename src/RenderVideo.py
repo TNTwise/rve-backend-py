@@ -153,7 +153,7 @@ class Render(FFMpegRender):
             )
             self.setupRender = interpolateRifeNCNN.bytesToByteArray
             self.interpolate = interpolateRifeNCNN.process
-        if self.backend == "pytorch":
+        if self.backend == "pytorch" or self.backend == "tensorrt":
             interpolateRifePytorch = InterpolateRifeTorch(
                 interpolateModelPath=self.interpolateModel,
                 width=self.width,

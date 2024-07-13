@@ -34,7 +34,7 @@ class InterpolateRifeTorch:
         self.interpolateModel = interpolateModelPath
         self.width = width
         self.height = height
-        self.device = device
+        self.device = torch.device("cuda", 0) # 0 is the device index, may have to change later
         self.dtype = self.handlePrecision(dtype)
         self.backend = backend
         scale = 1
@@ -42,7 +42,7 @@ class InterpolateRifeTorch:
             scale = 0.5
 
         state_dict = torch.load(
-            interpolateModelPath, map_location=device, weights_only=True, mmap=True
+            interpolateModelPath, map_location=self.device, weights_only=True, mmap=True
         )
 
         # detect what rife arch to use
@@ -67,16 +67,16 @@ class InterpolateRifeTorch:
         self.tenFlow_div = torch.tensor(
             [(self.pw - 1.0) / 2.0, (self.ph - 1.0) / 2.0],
             dtype=self.dtype,
-            device=device,
+            device=self.device,
         )
 
         tenHorizontal = (
-            torch.linspace(-1.0, 1.0, self.pw, dtype=self.dtype, device=device)
+            torch.linspace(-1.0, 1.0, self.pw, dtype=self.dtype, device=self.device)
             .view(1, 1, 1, self.pw)
             .expand(-1, -1, self.ph, -1)
         )
         tenVertical = (
-            torch.linspace(-1.0, 1.0, self.ph, dtype=self.dtype, device=device)
+            torch.linspace(-1.0, 1.0, self.ph, dtype=self.dtype, device=self.device)
             .view(1, 1, self.ph, 1)
             .expand(-1, -1, -1, self.pw)
         )
@@ -130,11 +130,11 @@ class InterpolateRifeTorch:
                 trt_max_shape.reverse()
 
                 example_tensors = (
-                    torch.zeros((1, 3, self.ph, self.ph), dtype=dtype, device=device),
-                    torch.zeros((1, 3, self.ph, self.ph), dtype=dtype, device=device),
-                    torch.zeros((1, 1, self.ph, self.ph), dtype=dtype, device=device),
-                    torch.zeros((2,), dtype=dtype, device=device),
-                    torch.zeros((1, 2, self.ph, self.ph), dtype=dtype, device=device),
+                    torch.zeros((1, 3, self.ph, self.ph), dtype=self.dtype, device=self.device),
+                    torch.zeros((1, 3, self.ph, self.ph), dtype=self.dtype, device=self.device),
+                    torch.zeros((1, 1, self.ph, self.ph), dtype=self.dtype, device=self.device),
+                    torch.zeros((2,), dtype=self.dtype, device=self.device),
+                    torch.zeros((1, 2, self.ph, self.ph), dtype=self.dtype, device=self.device),
                 )
 
                 _height = torch.export.Dim(
@@ -154,7 +154,7 @@ class InterpolateRifeTorch:
                 }
 
                 exported_program = torch.export.export(
-                    flownet, example_tensors, dynamic_shapes=dynamic_shapes
+                    self.flownet, example_tensors, dynamic_shapes=dynamic_shapes
                 )
 
                 inputs = [
@@ -162,33 +162,33 @@ class InterpolateRifeTorch:
                         min_shape=[1, 3] + trt_min_shape,
                         opt_shape=[1, 3] + trt_opt_shape,
                         max_shape=[1, 3] + trt_max_shape,
-                        dtype=dtype,
+                        dtype=self.dtype,
                         name="img0",
                     ),
                     torch_tensorrt.Input(
                         min_shape=[1, 3] + trt_min_shape,
                         opt_shape=[1, 3] + trt_opt_shape,
                         max_shape=[1, 3] + trt_max_shape,
-                        dtype=dtype,
+                        dtype=self.dtype,
                         name="img1",
                     ),
                     torch_tensorrt.Input(
                         min_shape=[1, 1] + trt_min_shape,
                         opt_shape=[1, 1] + trt_opt_shape,
                         max_shape=[1, 1] + trt_max_shape,
-                        dtype=dtype,
+                        dtype=self.dtype,
                         name="timestep",
                     ),
                     torch_tensorrt.Input(
                         shape=[2],
-                        dtype=dtype,
+                        dtype=self.dtype,
                         name="tenFlow_div",
                     ),
                     torch_tensorrt.Input(
                         min_shape=[1, 2] + trt_min_shape,
                         opt_shape=[1, 2] + trt_opt_shape,
                         max_shape=[1, 2] + trt_max_shape,
-                        dtype=dtype,
+                        dtype=self.dtype,
                         name="backwarp_tenGrid",
                     ),
                 ]
@@ -196,13 +196,13 @@ class InterpolateRifeTorch:
                 flownet = torch_tensorrt.dynamo.compile(
                     exported_program,
                     inputs,
-                    enabled_precisions={dtype},
+                    enabled_precisions={self.dtype},
                     debug=trt_debug,
                     workspace_size=trt_workspace_size,
                     min_block_size=1,
                     max_aux_streams=trt_max_aux_streams,
                     optimization_level=trt_optimization_level,
-                    device=device,
+                    device=self.device,
                     assume_dynamic_shape_support=True,
                 )
 
