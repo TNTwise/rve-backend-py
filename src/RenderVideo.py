@@ -127,13 +127,14 @@ class Render(FFMpegRender):
         Maps the self.setupRender function that can setup frames to be rendered
         Maps the self.upscale the upscale function in the respective backend.
         """
-        if self.backend == "pytorch":
+        if self.backend == "pytorch" or self.backend == "tensorrt":
             upscalePytorch = UpscalePytorch(
                 self.upscaleModel,
                 device=self.device,
                 precision=self.precision,
                 width=self.width,
                 height=self.height,
+                backend=self.backend
             )
             self.upscaleTimes = upscalePytorch.getScale()
             self.setupRender = upscalePytorch.bytesToFrame

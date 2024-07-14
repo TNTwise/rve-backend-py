@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import torch as torch
 from spandrel import ModelLoader, ImageModelDescriptor
-
+from src.Util import currentDirectory
 # tiling code permidently borrowed from https://github.com/chaiNNer-org/spandrel/issues/113#issuecomment-1907209731
 
 
@@ -17,18 +17,74 @@ class UpscalePytorch:
         precision: str = "float16",
         width: int = 1920,
         height: int = 1080,
+        backend: str = "pytorch",
+        # trt options
+        trt_workspace_size: int = 0,
+        trt_max_aux_streams: int | None = None,
+        trt_optimization_level: int = 5,
+        trt_cache_dir: str = currentDirectory(),
+        trt_debug: bool = False,
     ):
 
         self.tile_pad = tile_pad
         self.dtype = self.handlePrecision(precision)
         self.device = device
-        self.model = self.loadModel(
+        model = self.loadModel(
             modelPath=modelPath, device=device, dtype=self.handlePrecision(precision)
         )
-        self.scale = self.model.scale
+        self.scale = model.scale
         self.width = width
         self.height = height
+        if backend == "tensorrt":
+            import tensorrt
+            import torch_tensorrt
+            import torch_tensorrt.ts.logging as logging
+            trt_engine_path = os.path.join(
+                os.path.realpath(trt_cache_dir),
+                (
+                    f"{os.path.basename(modelPath)}"
+                    + f"_{width}x{height}"
+                    + f"_{'fp16' if self.dtype == torch.float16 else 'fp32'}"
+                    + f"_{torch.cuda.get_device_name(device)}"
+                    + f"_trt-{tensorrt.__version__}"
+                    + (f"_workspace-{trt_workspace_size}" if trt_workspace_size > 0 else "")
+                    + f"trt_opt-{trt_optimization_level}"
+                    + ".ts"
+                ),
+            )
+            if not os.path.isfile(trt_engine_path):
+                
 
+                
+
+                logging.set_reportable_log_level(logging.Level.Debug if trt_debug else logging.Level.Info)
+                logging.set_is_colored_output_on(True)
+
+ 
+                fake_input = [torch.zeros((1, 3, width, height), dtype=torch.float, device="cpu")]
+                inputs = [torch.zeros((1, 3, height, width), dtype=torch.half, device="cuda")]
+                model.cpu().eval().float()
+                model = model.model
+                model = torch.jit.trace(model, fake_input)
+
+            
+
+                model = torch_tensorrt.compile(
+                    model,
+                    ir="ts",
+                    inputs=inputs,
+                    enabled_precisions={self.dtype},
+                    device=torch_tensorrt.Device(gpu_id=0),
+                    workspace_size=trt_workspace_size,
+                    calibrator=None,
+                    truncate_long_and_double=True,
+                    min_block_size=1,
+                )
+
+                torch.jit.save(model, trt_engine_path)
+
+                model = torch.jit.load(trt_engine_path)
+        self.model = model
     def handlePrecision(self, precision):
         if precision == "float32":
             return torch.float32
