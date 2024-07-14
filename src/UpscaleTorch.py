@@ -25,32 +25,21 @@ class UpscalePytorch:
         trt_optimization_level: int = 5,
         trt_cache_dir: str = currentDirectory(),
         trt_debug: bool = False,
-        trt_min_shape: list[int] = [128, 128],
-        trt_opt_shape: list[int] = [640, 360],
-        trt_max_shape: list[int] = [1280, 720],
     ):
-        # adjust trt shape based on width/height
-        trt_min_shape = [int(width/15),int(height/15)]
-        trt_opt_shape = [width,height]
-        trt_max_shape = [width,height]
 
-        
         self.tile_pad = tile_pad
         self.dtype = self.handlePrecision(precision)
-        self.device = torch.device(device, 0) #device index
+        self.device = device
         model = self.loadModel(
             modelPath=modelPath, device=device, dtype=self.handlePrecision(precision)
         )
         self.scale = model.scale
         self.width = width
         self.height = height
-        model = model.model
-        
-        
         if backend == "tensorrt":
-            
             import tensorrt
             import torch_tensorrt
+            import torch_tensorrt.ts.logging as logging
             trt_engine_path = os.path.join(
                 os.path.realpath(trt_cache_dir),
                 (
@@ -65,54 +54,37 @@ class UpscalePytorch:
                 ),
             )
             if not os.path.isfile(trt_engine_path):
-                trt_min_shape.reverse()
-                trt_opt_shape.reverse()
-                trt_max_shape.reverse()
+                
 
-                trt_min_shape_out = [trt_min_shape[i] * 4 for i in range(2)]
-                trt_opt_shape_out = [trt_opt_shape[i] * 4 for i in range(2)]
-                trt_max_shape_out = [trt_max_shape[i] * 4 for i in range(2)]
-                example_tensors = (
-                    torch.zeros((1, 3, height, width), dtype=self.dtype, device=device),
-                )
-                _height = torch.export.Dim("height", min=trt_min_shape[0] // self.scale, max=trt_max_shape[0] // self.scale)
-                _width = torch.export.Dim("width", min=trt_min_shape[1] // self.scale, max=trt_max_shape[1] // self.scale)
-                dim_height = _height * self.scale
-                dim_width = _width * self.scale
-                dim_height_out = dim_height * self.scale
-                dim_width_out = dim_width * self.scale
-                dynamic_shapes = {
-                "x": {2: dim_height, 3: dim_width},
                 
-                
-                }
-                exported_program = torch.export.export(model, example_tensors, dynamic_shapes=dynamic_shapes)
-                inputs = [
-                torch_tensorrt.Input(
-                    min_shape=[1, 3] + trt_min_shape,
-                    opt_shape=[1, 3] + trt_opt_shape,
-                    max_shape=[1, 3] + trt_max_shape,
-                    dtype=self.dtype,
-                    name="x",
-                ),]
-                module = torch_tensorrt.dynamo.compile(
-                exported_program,
-                inputs,
-                enabled_precisions={self.dtype},
-                debug=trt_debug,
-                workspace_size=trt_workspace_size,
-                min_block_size=1,
-                max_aux_streams=trt_max_aux_streams,
-                optimization_level=trt_optimization_level,
-                device=self.device,
-                assume_dynamic_shape_support=False,
-            )
-                torch_tensorrt.save(module, trt_engine_path, output_format="torchscript", inputs=example_tensors)
+
+                logging.set_reportable_log_level(logging.Level.Debug if trt_debug else logging.Level.Info)
+                logging.set_is_colored_output_on(True)
+
+ 
+                fake_input = [torch.zeros((1, 3, width, height), dtype=torch.float, device="cpu")]
+                inputs = [torch.zeros((1, 3, height, width), dtype=torch.half, device="cuda")]
+                model.cpu().eval().float()
+                model = model.model
+                model = torch.jit.trace(model, fake_input)
+
             
 
-                
+                model = torch_tensorrt.compile(
+                    model,
+                    ir="ts",
+                    inputs=inputs,
+                    enabled_precisions={self.dtype},
+                    device=torch_tensorrt.Device(gpu_id=0),
+                    workspace_size=trt_workspace_size,
+                    calibrator=None,
+                    truncate_long_and_double=True,
+                    min_block_size=1,
+                )
 
-                
+                torch.jit.save(model, trt_engine_path)
+
+                model = torch.jit.load(trt_engine_path)
         self.model = model
     def handlePrecision(self, precision):
         if precision == "float32":
