@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 from typing import TypeVar
 import sys
+
 from upscale_ncnn_py import UPSCALE
 
 import cv2

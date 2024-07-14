@@ -9,17 +9,21 @@ class HandleApplication:
         self.args = self.handleArguments()
         self.checkArguments()
         ffmpegSettings = Render(
+            #model settings
             inputFile=self.args.input,
             outputFile=self.args.output,
             interpolateModel=self.args.interpolateModel,
             interpolateFactor=self.args.interpolateFactor,
             upscaleModel=self.args.upscaleModel,
+            #backend settings
             device="cuda",
             backend=self.args.backend,
             precision="float16" if self.args.half else "float32",
+            # ffmpeg settings
             overwrite=self.args.overwrite,
             crf=self.args.crf,
-            benchmark=self.args.benchmark
+            benchmark=self.args.benchmark,
+            encoder=self.args.custom_encoder
         )
 
 
@@ -125,6 +129,12 @@ class HandleApplication:
             "--crf",
             help="Constant rate factor for videos, lower setting means higher quality.",
             default="18",
+        )
+        parser.add_argument(
+            "--custom_encoder",
+            help="custom encoder",
+            default="-c:v libx264",
+            type=str,
         )
         parser.add_argument(
             "--benchmark",

@@ -108,8 +108,6 @@ class FFMpegRender:
                     "-",
                     "-i",
                     f"{self.inputFile}",
-                    "-c:v",
-                    self.encoder,
                     f"-crf",
                     f"{self.crf}",
                     "-pix_fmt",
@@ -118,6 +116,8 @@ class FFMpegRender:
                     "copy",
                     f"{self.outputFile}",
                 ]
+                for i in self.encoder.split():
+                    command.append(i)
             else:
                 print("Using benchmark mode")
                 command = [
