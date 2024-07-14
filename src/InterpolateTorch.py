@@ -31,6 +31,10 @@ class InterpolateRifeTorch:
         trt_cache_dir: str = currentDirectory(),
         trt_debug: bool = False,
     ):
+        trt_min_shape = [int(width/15),int(height/15)]
+        trt_opt_shape = [width,height]
+        trt_max_shape = [width,height]
+
         self.interpolateModel = interpolateModelPath
         self.width = width
         self.height = height
