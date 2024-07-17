@@ -84,7 +84,7 @@ class UpscalePytorch:
 
                 torch.jit.save(model, trt_engine_path)
 
-                model = torch.jit.load(trt_engine_path)
+            model = torch.jit.load(trt_engine_path)
         self.model = model
     def handlePrecision(self, precision):
         if precision == "float32":
