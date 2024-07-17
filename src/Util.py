@@ -1,17 +1,9 @@
-from PIL import Image
 import os
 import warnings
 
 cwd = os.getcwd()
 
 
-def is_image(file_path):
-    try:
-        img = Image.open(file_path)
-        img.verify()  # Check if it's a valid image file
-        return True
-    except (IOError, SyntaxError):
-        return False
 
 
 def warnAndLog(message: str):
