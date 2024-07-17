@@ -185,6 +185,8 @@ class FFMpegRender:
                 if frame is None:
                     break
                 self.writeProcess.stdin.buffer.write(frame)
+            self.writeProcess.stdin.close()
+            self.writeProcess.wait()
 
         else:
             process = subprocess.Popen(["cat"], stdin=subprocess.PIPE)
@@ -193,7 +195,8 @@ class FFMpegRender:
                 if frame is None:
                     break
                 process.stdin.write(frame)
-        self.writeProcess.stdin.close()
-        self.writeProcess.wait()
+            process.stdin.close()
+            process.wait()
+        
         renderTime = time.time() - startTime
         print(f"Time to complete render: {round(renderTime, 2)}")
