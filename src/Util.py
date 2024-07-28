@@ -4,6 +4,7 @@ import warnings
 import sys
 import requests
 import stat
+import subprocess
 
 cwd = os.getcwd()
 
@@ -21,12 +22,20 @@ def getPlatform() -> str:
     return sys.platform
 
 
+
 def pythonPath() -> str:
     return (
         os.path.join(cwd, "python", "bin", "python3.11")
         if getPlatform() == "darwin" or getPlatform() == "linux"
         else os.path.join(cwd, "python", "bin", "python3.exe")
     )
+
+def activatePythonCommand():
+    """
+    returns the command to activate python virtual environment due to weird bug when virtual environment is not activated
+    """
+    return [pythonPath(), '-m', 'venv', 'activate']
+
 
 def modelsPath() -> str:
     return (
